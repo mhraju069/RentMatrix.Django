@@ -61,6 +61,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    @property
+    def username(self):
+        return self.email
         
     def save(self, *args, **kwargs):
         if self.password and not self.password.startswith('pbkdf2_sha256$'):
