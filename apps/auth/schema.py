@@ -7,6 +7,7 @@ class CreateUserSchema(msgspec.Struct):
     password : str
     phone : str
     name : str
+    role : str
 
 
 
@@ -18,9 +19,14 @@ class UserDataSchema(msgspec.Struct):
     image : Optional[str] = None
 
 
-class SignupResponseSchema(msgspec.Struct):
+class UserDataResponseSchema(msgspec.Struct):
     message:str
     status: int
     success: bool
     user: UserDataSchema
     
+
+class LoginUserSchema(msgspec.Struct):
+    password : str
+    email : Optional[str] = None
+    phone : Optional[str] = None
