@@ -12,3 +12,8 @@ class CreateBookingSchema(msgspec.Struct):
     start_date: date
     end_date: date
     num_guests: int
+
+
+
+class ConfirmBookingSchema(msgspec.Struct):
+    payment_method_id: str

@@ -3,6 +3,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_key")
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ad3l62**mkv&m91&(v7+a4zg1!0!(_!c_i$$d#!y*!n*9z1%t*'
 DEBUG = True

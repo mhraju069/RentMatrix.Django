@@ -1,6 +1,7 @@
 from django_bolt import Router
 from .schema import *
 from .models import Booking
+from .utils import *
 from apps.property.models import Property
 from django.http import JsonResponse
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
@@ -50,7 +51,7 @@ async def create_booking(request, data: CreateBookingSchema):
 
 
 @api.post('/confirm/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
-async def confirm_booking(request, booking_id):
+async def confirm_booking(request, booking_id, data: ConfirmBookingSchema):
     booking = await Booking.objects.filter(id=booking_id).afirst()
     if not booking:
         return JsonResponse(data={"status": 404, "success": False, "message": "Booking not found"}, status=404)
@@ -61,23 +62,30 @@ async def confirm_booking(request, booking_id):
     if booking.status == "CANCELLED":
         return JsonResponse(data={"status": 400, "success": False, "message": "Booking cannot be confirmed as it is cancelled"}, status=400)
 
-    booking.status = "CONFIRMED"
-    await booking.asave()
+    payment = await Create_payment_intent(request, booking.id, booking.price, data.payment_method_id)
+    
+    if not payment["success"]:
+        return JsonResponse(data={"status": payment["status"], "success": payment["success"], "message": payment["message"]}, status=payment["status"])
+
+    if payment["success"] and not payment.get("requires_action"):
+        booking.status = "CONFIRMED"
+        await booking.asave()
+    
     return JsonResponse({
         "status": 200,
         "success": True,
         "message": "Booking confirmed successfully",
-        "data": {
-            "id": booking.id,
-            "property_id": str(booking.property_id),
-            "name": booking.name,
-            "phone": booking.phone,
-            "email": booking.email,
-            "guest_count": booking.guest_count,
-            "check_in": booking.check_in.isoformat() if booking.check_in else "",
-            "check_out": booking.check_out.isoformat() if booking.check_out else "",
-            "price": float(booking.price),
-            "status": booking.status,
-        }
+        "payment": payment
     })
+
+
+
+
+@api.post('/payment/success')
+async def payment_success(request):
     
+    return JsonResponse({
+        "status": 200,
+        "success": True,
+        "message": "Payment success",
+    })
