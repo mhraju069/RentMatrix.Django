@@ -1,9 +1,29 @@
+import base64
 import uuid
 from django.http import JsonResponse
 from django.db.models import Avg
+from django.core.files.base import ContentFile
 from django_bolt import Router
-from .models import Property
+from .models import Property, Amenity, Gallery
 from .schema import *
+from django_bolt.auth import JWTAuthentication, IsAuthenticated
+
+
+def decode_base64_file(data_str: str, prefix: str = "file") -> ContentFile | None:
+    if not data_str or ";base64," not in data_str:
+        return None
+    try:
+        format, imgstr = data_str.split(';base64,')
+        ext = format.split('/')[-1]
+        if '+' in ext:
+            ext = ext.split('+')[0]
+        file_name = f"{prefix}_{uuid.uuid4().hex}.{ext}"
+        return ContentFile(base64.b64decode(imgstr), name=file_name)
+    except Exception as e:
+        print(f"Error decoding base64 file: {e}")
+        return None
+
+
 api = Router(prefix='/api/v1/property')
 
 
@@ -93,3 +113,97 @@ async def get_property_list():
         success=True,
         data=data
     )
+
+
+@api.post('/create', response_model=PropertyListResponse, auth=[JWTAuthentication()], guards=[IsAuthenticated()])
+async def create_property(request, data: CreatePropertySchema):
+    cover_file = decode_base64_file(data.cover, prefix="cover") if data.cover else None
+
+    property = await Property.objects.acreate(
+        owner=request.user,
+        name=data.name,
+        address=data.address,
+        bedroom=data.bedroom,
+        bathroom=data.bathroom,
+        area=data.size,
+        about=data.about,
+        cover_image=cover_file,
+        latitude=data.latitude,
+        longitude=data.longitude,
+        price=data.price,
+        type=data.type,
+    )
+
+    if data.amenities:
+        for amenity in data.amenities:
+            await Amenity.objects.acreate(
+                property=property,
+                name=amenity.name
+            )
+
+    if data.gallery:
+        for gallery_item in data.gallery:
+            gallery_file = decode_base64_file(gallery_item.file, prefix="gallery")
+            if gallery_file:
+                await Gallery.objects.acreate(
+                    property=property,
+                    type=gallery_item.type,
+                    file=gallery_file
+                )
+            
+    return PropertyListResponse(
+        status=200,
+        message="Property created successfully",
+        success=True,
+        data=[
+            PropertyListSchema(
+                id=property.id,
+                name=property.name,
+                price=float(property.price or 0.0),
+                bathroom=property.bathroom or 0,
+                bedroom=property.bedroom or 0,
+                size=property.area or "",
+                type=property.type,
+                cover=property.cover_image.url if property.cover_image else "",
+                average_rating="0.0",
+                address=property.address,
+            )
+        ]
+    )
+
+
+#Demo json
+# {
+#   "name": "Luxury Oceanfront Villa",
+#   "address": "123 Marine Drive, Cox's Bazar",
+#   "bedroom": 4,
+#   "bathroom": 3,
+#   "size": "2500 sqft",
+#   "about": "A stunning oceanfront villa with panoramic views, spacious bedrooms, and modern amenities.",
+#   "cover": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+#   "latitude": 21.4272,
+#   "longitude": 91.9705,
+#   "price": 250000.0,
+#   "type": "VILLA",
+#   "amenities": [
+#     {
+#       "name": "Swimming Pool"
+#     },
+#     {
+#       "name": "Wi-Fi"
+#     },
+#     {
+#       "name": "Air Conditioning"
+#     }
+#   ],
+#   "gallery": [
+#     {
+#       "type": "IMAGE",
+#       "file": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+#     },
+#     {
+#       "type": "IMAGE",
+#       "file": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+#     }
+#   ]
+# }

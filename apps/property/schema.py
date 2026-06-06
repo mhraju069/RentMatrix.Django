@@ -68,3 +68,17 @@ class PropertyListResponse(msgspec.Struct):
     data : List[PropertyListSchema]
 
     
+class CreatePropertySchema(msgspec.Struct):
+    name: str
+    address: str
+    bedroom: int
+    bathroom: int
+    size: str
+    about: str
+    cover: str
+    latitude: float
+    longitude: float
+    price: float
+    type: str
+    amenities: Optional[List[PropertyAmenitySchema]] = None
+    gallery: Optional[List[PropertyGallerySchema]] = None
