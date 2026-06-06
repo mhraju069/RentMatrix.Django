@@ -102,3 +102,17 @@ class OTP(models.Model):
 
     def is_expired(self):
         return self.created_at + timedelta(minutes=3) < timezone.now()
+
+
+
+
+class Document(models.Model):
+    DOCUMENT_TYPE = (('NID','National ID'),('PASSPORT','Passport'),('BANK_STATEMENT','Bank Statement'))
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE, default='NID')
+    document_file = models.FileField(upload_to='documents/')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.document_type}"    
