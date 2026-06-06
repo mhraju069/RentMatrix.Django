@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from apps.property.models import Property
 from django.conf import settings
@@ -12,6 +13,7 @@ STATUS_CHOICES = [
 
 
 class Booking(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     property = models.ForeignKey(Property, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
