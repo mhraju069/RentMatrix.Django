@@ -54,6 +54,7 @@ async def get_property_details(id: uuid.UUID):
         status=property.status,
         verified=property.verified,
         review_count=str(review_count),
+        cover=property.cover_image.url if property.cover_image else "",
         average_rating=f"{avg_rating:.1f}",
         address=property.address,
         latitude=property.latitude or 0.0,

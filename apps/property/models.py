@@ -28,6 +28,7 @@ class Property(models.Model):
     bathroom = models.IntegerField(null=True, blank=True)
     area = models.CharField(max_length=255, null=True, blank=True)
     about = models.TextField(null=True, blank=True)
+    cover_image = models.ImageField(upload_to='property_gallery/',blank=True)
     latitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)])
     longitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)])
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

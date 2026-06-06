@@ -21,12 +21,15 @@ class ReviewSchema(msgspec.Struct):
     user: UserSchema
     created_at: str
 
+
 class GetPropertySchema(msgspec.Struct):
     id: uuid.UUID
+
 
 class PropertyDetailSchema(msgspec.Struct):
     name: str
     about: str
+    cover: str
     price: float
     owner: UserSchema
     bathroom: int
@@ -45,3 +48,5 @@ class PropertyDetailSchema(msgspec.Struct):
     reviews : Optional[List[ReviewSchema]] = None
 
 
+# class PropertyListSchema(msgspec.Struct):
+    
