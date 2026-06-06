@@ -1,3 +1,4 @@
+from apps.auth.models import OTP
 from apps.auth.utils import send_otp
 import random,string
 from .schema import *
@@ -144,7 +145,8 @@ async def get_otp(request, data: GetOtpSchema):
     if not user:
         return JsonResponse(data={"status":404,"success":False,"message":"User not found"})
     
-
+    await OTP.objects.filter(user=user).adelete()
+        
     otp_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     await OTP.objects.acreate(
         user=user,
@@ -159,4 +161,45 @@ async def get_otp(request, data: GetOtpSchema):
 
 @api.post("/verify-otp")
 async def verify_otp(request, data: VerifyOtpSchema):
-    pass
+
+    user = await User.objects.filter(email=data.email).afirst()
+    if not user:
+        return JsonResponse(data={"status":404,"success":False,"message":"User not found"})
+    
+    otp_code = await OTP.objects.filter(user=user).afirst()
+    if not otp_code:
+        return JsonResponse(data={"status":404,"success":False,"message":"OTP not found"})
+    
+    print(otp_code.otp)
+    print(data.otp)
+    print(otp_code.otp == data.otp)
+
+    if otp_code.otp != data.otp:
+        return JsonResponse(data={"status":400,"success":False,"message":"Invalid OTP"})
+    
+    if otp_code.is_expired():
+        await otp_code.adelete()
+        return JsonResponse(data={"status":400,"success":False,"message":"OTP expired"})
+
+    await otp_code.adelete()
+
+
+    access_token = create_jwt_for_user(user, expires_in=ACCESS_TOKEN_LIFETIME)
+    refresh_token = create_jwt_for_user(user, expires_in=REFRESH_TOKEN_LIFETIME, extra_claims={"type": "refresh"})
+
+    user_data = UserDataSchema(
+        email=user.email,
+        role=user.role,
+        name=user.name,
+        phone=user.phone,
+        image=user.image.url if user.image else None
+    )
+
+    return UserDataResponseSchema(
+        message="Otp verified successfully",
+        status=200,
+        success=True,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=user_data,
+    )
