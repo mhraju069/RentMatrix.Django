@@ -10,6 +10,7 @@ from django.db.models import Q
 from django_bolt.auth import create_jwt_for_user, JWTAuthentication, IsAuthenticated, Token
 from django.conf import settings
 from django.core.files.base import ContentFile
+from apps.property.api import decode_base64_file
 
 
 api = Router(prefix="/api/v1/auth")
@@ -213,38 +214,38 @@ async def verify_otp(request, data: VerifyOtpSchema):
 
 
 
-@api.patch("/me/update", auth=[JWTAuthentication()], guards=[IsAuthenticated()],response_model=UserDataResponseSchema)
-async def me_update(request, data: UpdateUserSchema):
+@api.patch("/me/update", auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=UserDataResponseSchema)
+def me_update(request):
     user = request.user
-    for key, value in msgspec.structs.asdict(data).items():
-        if value is not None:
-            if key == "new_password":
-                if not data.old_password or not data.new_password:
-                    return JsonResponse(data={"status":400,"success":False,"message":"Old and new password are required"})
-                
-                if not user.check_password(data.old_password):
-                    return JsonResponse(data={"status":400,"success":False,"message":"Invalid old password"})
-                
-                user.set_password(data.new_password)
-                continue
-            
-            if key == "image":
-                
-                try:
-                    format, imgstr = value.split(';base64,')
-                    ext = format.split('/')[-1]
-                    file_data = ContentFile(base64.b64decode(imgstr), name=f"profile_{user.id}.{ext}")
-                    user.image = file_data
-                except Exception as e:
-                    print("Error processing image while updating user data: ", str(e))
-                
-                continue
 
-            if key in ("name", "phone"):
-                setattr(user, key, value)
-                continue
-    await user.asave()
-    
+    try:
+        data = msgspec.json.decode(request.body, type=UpdateUserSchema)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid request payload"}, status=400)
+
+    if data.name is not None:
+        user.name = data.name
+    if data.phone is not None:
+        user.phone = data.phone
+
+    if data.new_password is not None:
+        if not data.old_password or not data.new_password:
+            return JsonResponse({"success": False, "message": "Old and new password are required"}, status=400)
+        
+        if not user.check_password(data.old_password):
+            return JsonResponse({"success": False, "message": "Invalid old password"}, status=400)
+            
+        user.set_password(data.new_password)
+
+    uploaded_image = request.FILES.get("image")
+    if uploaded_image:
+        if not uploaded_image.content_type.startswith("image/"):
+            return JsonResponse({"success": False, "message": "Uploaded file is not a valid image"}, status=400)
+            
+        user.image = uploaded_image
+
+    user.save() 
+
     user_data = UserDataSchema(
         email=user.email,
         role=user.role,
@@ -287,8 +288,28 @@ async def reset_password(request, data: ResetPasswordSchema):
         refresh_token=refresh_token,
     )
 
-    
 
 
+@api.post("/upload-document", auth=[JWTAuthentication()], guards=[IsAuthenticated()])    
+def upload_document(request):
+    user = request.user
 
-    
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        return JsonResponse({"success": False, "message": "File not provided"}, status=400)
+        
+    document_type = request.POST.get("type") or request.data.get("type")
+    if not document_type:
+        return JsonResponse({"success": False, "message": "Document type is required"}, status=400)
+
+    try:
+        Document.objects.create(
+            user=user,
+            document_type=document_type,
+            document_file=uploaded_file,
+        )
+
+        return JsonResponse({"status":200,"success":True,"message":"Document uploaded successfully"})
+
+    except Exception as e:
+        return JsonResponse({"status":500,"success":False,"message":f"Error while uploading document: {str(e)}"})

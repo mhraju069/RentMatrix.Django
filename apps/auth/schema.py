@@ -1,5 +1,6 @@
 import msgspec
 from typing import Optional,List
+from django_bolt import UploadFile
 
 
 class CreateUserSchema(msgspec.Struct):
@@ -64,3 +65,9 @@ class UpdateUserSchema(msgspec.Struct):
 
 class ResetPasswordSchema(msgspec.Struct):
     new_password: str
+
+
+
+class UploadDocumentSchema(msgspec.Struct):
+    type: str
+    file: UploadFile
