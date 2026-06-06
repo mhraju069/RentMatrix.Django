@@ -64,6 +64,12 @@ async def login(request,data: LoginUserSchema):
     if not user:
         return JsonResponse(data={"status":404,"success":False,"message":"User not found"})
 
+    if not user.is_active:
+        return JsonResponse(data={"status":403,"success":False,"message":"Your account is inactive."})
+
+    if user.block:
+        return JsonResponse(data={"status":403,"success":False,"message":"Your account has been blocked."})
+    
     if not user.check_password(data.password):
         return JsonResponse(data={"status":401,"success":False,"message":"Invalid credentials"})
 
