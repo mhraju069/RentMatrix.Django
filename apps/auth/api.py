@@ -252,3 +252,37 @@ async def me_update(request, data: UpdateUserSchema):
         success=True,
         user=user_data,
     )
+
+
+
+@api.post("/reset-password",auth=[JWTAuthentication()], guards=[IsAuthenticated()],response_model=UserDataResponseSchema)
+async def reset_password(request, data: ResetPasswordSchema):
+    user = request.user
+
+    user.set_password(data.new_password)
+    await user.asave()
+
+    access_token = create_jwt_for_user(user, expires_in=ACCESS_TOKEN_LIFETIME)
+    refresh_token = create_jwt_for_user(user, expires_in=REFRESH_TOKEN_LIFETIME, extra_claims={"type": "refresh"})
+
+    user_data = UserDataSchema(
+        email=user.email,
+        role=user.role,
+        name=user.name,
+        phone=user.phone,
+        image=user.image.url if user.image else None
+    )
+    return UserDataResponseSchema(
+        message="Password reset successfully",
+        status=200,
+        success=True,
+        user=user_data,
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+
+    
+
+
+
+    

@@ -60,3 +60,7 @@ class UpdateUserSchema(msgspec.Struct):
     image: Optional[str] = None
     old_password: Optional[str] = None
     new_password: Optional[str] = None
+
+
+class ResetPasswordSchema(msgspec.Struct):
+    new_password: str
