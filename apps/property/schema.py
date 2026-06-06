@@ -1,4 +1,4 @@
-import msgspec
+import msgspec, uuid
 from typing import Optional,List
 
 class UserSchema(msgspec.Struct):
@@ -21,6 +21,8 @@ class ReviewSchema(msgspec.Struct):
     user: UserSchema
     created_at: str
 
+class GetPropertySchema(msgspec.Struct):
+    id: uuid.UUID
 
 class PropertyDetailSchema(msgspec.Struct):
     name: str
