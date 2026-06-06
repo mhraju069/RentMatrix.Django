@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "django_bolt",
     "apps.auth",
     "apps.property",
+    "apps.booking",
 ]
 
 AUTH_USER_MODEL = 'authentications.User'
