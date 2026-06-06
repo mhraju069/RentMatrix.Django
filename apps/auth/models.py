@@ -98,10 +98,5 @@ class OTP(models.Model):
     def __str__(self):
         return f"OTP for: {self.user}."
 
-    @staticmethod
-    def generate_otp(user):
-        otp_code = str(random.randint(1000, 9999))
-        return OTP.objects.create(user=user, otp=otp_code)
-
     def is_expired(self):
         return self.created_at + timedelta(minutes=3) < timezone.now()

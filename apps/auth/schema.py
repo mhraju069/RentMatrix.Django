@@ -43,3 +43,12 @@ class TokenResponseSchema(msgspec.Struct):
     success: bool
     access_token: str
     refresh_token: Optional[str] = None
+
+
+class GetOtpSchema(msgspec.Struct):
+    email: str
+
+
+class VerifyOtpSchema(msgspec.Struct):
+    email: str
+    otp: str

@@ -1,3 +1,5 @@
+from apps.auth.utils import send_otp
+import random,string
 from .schema import *
 from .models import *
 from django_bolt import BoltAPI
@@ -132,3 +134,29 @@ async def me(request):
         success=True,
         user=user_data,
     )
+
+
+
+@api.post("/get-otp")
+async def get_otp(request, data: GetOtpSchema):
+
+    user = await User.objects.filter(email=data.email).afirst()
+    if not user:
+        return JsonResponse(data={"status":404,"success":False,"message":"User not found"})
+    
+
+    otp_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+    await OTP.objects.acreate(
+        user=user,
+        otp=otp_code
+    )
+        
+    status, res, msg = await send_otp(user.email, otp_code, "Login")
+    
+    return JsonResponse(data={"status":status,"success":res,"message":msg})
+
+
+
+@api.post("/verify-otp")
+async def verify_otp(request, data: VerifyOtpSchema):
+    pass
