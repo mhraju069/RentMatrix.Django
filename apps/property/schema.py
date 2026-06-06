@@ -48,5 +48,23 @@ class PropertyDetailSchema(msgspec.Struct):
     reviews : Optional[List[ReviewSchema]] = None
 
 
-# class PropertyListSchema(msgspec.Struct):
+class PropertyListSchema(msgspec.Struct):
+    id : uuid.UUID
+    cover : str
+    name : str
+    price : float
+    address : str
+    bathroom : int
+    bedroom : int
+    size : str
+    type : str
+    average_rating : str
+
+
+class PropertyListResponse(msgspec.Struct):
+    status : int
+    message : str
+    success : bool
+    data : List[PropertyListSchema]
+
     

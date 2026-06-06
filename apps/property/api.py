@@ -1,5 +1,6 @@
 import uuid
 from django.http import JsonResponse
+from django.db.models import Avg
 from django_bolt import Router
 from .models import Property
 from .schema import *
@@ -62,4 +63,33 @@ async def get_property_details(id: uuid.UUID):
         amenities=amenities,
         gallery=gallery,
         reviews=reviews
+    )
+
+
+@api.get('/', response_model=PropertyListResponse)
+async def get_property_list():
+    data = []
+    # Fetch all properties with average rating annotated in a single database query
+    async for p in Property.objects.annotate(avg_rating=Avg('reviews__rating')).all():
+        avg_rating = p.avg_rating or 0.0
+        data.append(
+            PropertyListSchema(
+                id=p.id,
+                name=p.name,
+                price=float(p.price or 0.0),
+                bathroom=p.bathroom or 0,
+                bedroom=p.bedroom or 0,
+                size=p.area or "",
+                type=p.type,
+                cover=p.cover_image.url if p.cover_image else "",
+                average_rating=f"{avg_rating:.1f}",
+                address=p.address
+            )
+        )
+
+    return PropertyListResponse(
+        status=200,
+        message="Properties fetched successfully",
+        success=True,
+        data=data
     )
