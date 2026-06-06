@@ -1,21 +1,22 @@
-from apps.auth.models import OTP
-from apps.auth.utils import send_otp
-import random,string
+import os,msgspec,base64,random,string
+from dotenv import load_dotenv
+load_dotenv()
+from .utils import *
 from .schema import *
 from .models import *
 from django_bolt import BoltAPI
-from django_bolt.exceptions import Conflict
 from django.http import JsonResponse
 from django.db.models import Q
 from django_bolt.auth import create_jwt_for_user, JWTAuthentication, IsAuthenticated, Token
 from django.conf import settings
-from datetime import timedelta
+from django.core.files.base import ContentFile
+
 
 api = BoltAPI(prefix="/api/v1/auth")
 
 # Expiration constants (in seconds)
-ACCESS_TOKEN_LIFETIME = int(timedelta(days=7).total_seconds())
-REFRESH_TOKEN_LIFETIME = int(timedelta(days=30).total_seconds())
+ACCESS_TOKEN_LIFETIME = int(os.getenv("ACCESS_TOKEN_LIFETIME") or 604800)
+REFRESH_TOKEN_LIFETIME = int(os.getenv("REFRESH_TOKEN_LIFETIME") or 2592000)
 
 
 @api.post("/signup", response_model=UserDataResponseSchema)
@@ -201,5 +202,53 @@ async def verify_otp(request, data: VerifyOtpSchema):
         success=True,
         access_token=access_token,
         refresh_token=refresh_token,
+        user=user_data,
+    )
+
+
+
+@api.patch("/me/update", auth=[JWTAuthentication()], guards=[IsAuthenticated()],response_model=UserDataResponseSchema)
+async def me_update(request, data: UpdateUserSchema):
+    user = request.user
+    for key, value in msgspec.structs.asdict(data).items():
+        if value is not None:
+            if key == "new_password":
+                if not data.old_password or not data.new_password:
+                    return JsonResponse(data={"status":400,"success":False,"message":"Old and new password are required"})
+                
+                if not user.check_password(data.old_password):
+                    return JsonResponse(data={"status":400,"success":False,"message":"Invalid old password"})
+                
+                user.set_password(data.new_password)
+                continue
+            
+            if key == "image":
+                
+                try:
+                    format, imgstr = value.split(';base64,')
+                    ext = format.split('/')[-1]
+                    file_data = ContentFile(base64.b64decode(imgstr), name=f"profile_{user.id}.{ext}")
+                    user.image = file_data
+                except Exception as e:
+                    print("Error processing image while updating user data: ", str(e))
+                
+                continue
+
+            if key in ("name", "phone"):
+                setattr(user, key, value)
+                continue
+    await user.asave()
+    
+    user_data = UserDataSchema(
+        email=user.email,
+        role=user.role,
+        name=user.name,
+        phone=user.phone,
+        image=user.image.url if user.image else None
+    )
+    return UserDataResponseSchema(
+        message="User updated successfully",
+        status=200,
+        success=True,
         user=user_data,
     )

@@ -52,3 +52,11 @@ class GetOtpSchema(msgspec.Struct):
 class VerifyOtpSchema(msgspec.Struct):
     email: str
     otp: str
+
+
+class UpdateUserSchema(msgspec.Struct):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    image: Optional[str] = None
+    old_password: Optional[str] = None
+    new_password: Optional[str] = None
