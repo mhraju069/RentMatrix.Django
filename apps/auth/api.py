@@ -4,7 +4,7 @@ load_dotenv()
 from .utils import *
 from .schema import *
 from .models import *
-from django_bolt import BoltAPI
+from django_bolt import Router
 from django.http import JsonResponse
 from django.db.models import Q
 from django_bolt.auth import create_jwt_for_user, JWTAuthentication, IsAuthenticated, Token
@@ -12,7 +12,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 
 
-api = BoltAPI(prefix="/api/v1/auth")
+api = Router(prefix="/api/v1/auth")
 
 # Expiration constants (in seconds)
 ACCESS_TOKEN_LIFETIME = int(os.getenv("ACCESS_TOKEN_LIFETIME") or 604800)

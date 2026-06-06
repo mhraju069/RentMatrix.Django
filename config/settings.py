@@ -11,6 +11,8 @@ ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [
+    "unfold",
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -22,7 +24,7 @@ INSTALLED_APPS = [
     "apps.auth",
 ]
 
-AUTH_USER_MODEL = 'rent_auth.User'
+AUTH_USER_MODEL = 'authentications.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -34,7 +36,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = 'config.api'
 
 TEMPLATES = [
     {
