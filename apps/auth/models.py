@@ -46,8 +46,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=False,verbose_name="Active User")
     is_staff = models.BooleanField(default=False,verbose_name="Staff User")
     is_superuser = models.BooleanField(default=False,verbose_name="Super User")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Joining Date")
     block = models.BooleanField(default=False,verbose_name="Suspend User")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Joining Date")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated Date")
 
     objects = UserManager()
     

@@ -11,16 +11,17 @@ class UserAdmin(ModelAdmin):
     search_fields = ("name", "email", "phone")
     ordering = ("-created_at",)
     filter_horizontal = ("groups", "user_permissions")
+    readonly_fields = ("created_at", "updated_at")
 
     fieldsets = (
         ("Identity", {
-            "fields": ("name", "email", "phone")
+            "fields": ("name", "email", "phone", "image", "role")
         }),
         ("Access", {
             "fields": ("password", "is_active", "is_staff", "is_superuser")
         }),
         ("Dates", {
-            "fields": ("last_login", "date_joined")
+            "fields": ("created_at", "updated_at")
         }),
     )
 
