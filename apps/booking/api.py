@@ -74,6 +74,7 @@ async def booking_list(request):
                     bedroom=p.bedroom or 0,
                     size=p.area or "",
                     type=p.type,
+                    views=p.views,
                     average_rating=f"{avg_rating:.1f}",
                     cover=p.cover_image.url if p.cover_image else "",
                 ),

@@ -99,3 +99,15 @@ class FavouriteListResponseSchema(msgspec.Struct):
     message : str
     success : bool
     properties : List[PropertyListSchema]
+
+
+
+class MyPropertyDetailResponseSchema(msgspec.Struct):
+    status : int
+    message : str
+    success : bool
+    occupancy : str
+    total_bookings : int
+    avg_stay : str
+    property : PropertyDetailSchema
+
