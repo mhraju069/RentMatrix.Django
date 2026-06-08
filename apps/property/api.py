@@ -86,6 +86,7 @@ async def get_property_details(id: uuid.UUID):
     )
 
 
+
 @api.get('/', response_model=PropertyListResponse)
 async def get_property_list():
     data = []
@@ -113,6 +114,7 @@ async def get_property_list():
         success=True,
         data=data
     )
+
 
 
 @api.post('/create', response_model=PropertyListResponse, auth=[JWTAuthentication()], guards=[IsAuthenticated()])
@@ -197,4 +199,40 @@ async def update_favourite_property(request, property_id: uuid.UUID, data:AddFav
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
     
-    
+
+
+@api.get('/favourite', response_model=PropertyListResponse, auth=[JWTAuthentication()], guards=[IsAuthenticated()], summary="Get Favourite Properties List")
+async def get_favourite_property(request):
+    try:
+        favourite_properties = Favourites.objects.filter(user=request.user).select_related('property')
+        
+        data = []
+        async for favourite_property in favourite_properties:
+            prop = favourite_property.property
+            review_stats = await prop.reviews.aaggregate(Avg('rating'))
+            avg_rating_val = review_stats['rating__avg'] or 0.0
+            
+            data.append(
+                PropertyListSchema(
+                    id=prop.id,
+                    name=prop.name,
+                    price=float(prop.price or 0.0),
+                    bathroom=prop.bathroom or 0,
+                    bedroom=prop.bedroom or 0,
+                    size=prop.area or "",
+                    type=prop.type,
+                    cover=prop.cover_image.url if prop.cover_image else "",
+                    average_rating=f"{avg_rating_val:.1f}",
+                    address=prop.address,
+                )
+            )
+            
+        return PropertyListResponse(
+            status=200,
+            message="Favourite properties fetched successfully",
+            success=True,
+            data=data
+        )
+        
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
