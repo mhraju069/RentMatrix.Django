@@ -1,6 +1,6 @@
 from apps.property.models import Favourites
-import base64
-import uuid
+import base64,uuid
+from django.db.models import F
 from django.http import JsonResponse
 from django.db.models import Avg
 from django.core.files.base import ContentFile
@@ -31,8 +31,13 @@ api = Router(prefix='/api/v1/guest/property')
 @api.get('/{property_id:uuid}', response_model=PropertyDetailSchema,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Property Details")
 async def get_property_details(request,property_id: uuid.UUID):
     property = await Property.objects.select_related('owner').filter(id=property_id).afirst()
+    
     if not property:
         return JsonResponse(data={"status": 404, "success": False, "message": "Property not found"})
+    
+    property.views = F('views') + 1
+
+    await property.asave(update_fields=['views'])
     
     amenities = [
         PropertyAmenitySchema(name=a.name)
@@ -86,6 +91,7 @@ async def get_property_details(request,property_id: uuid.UUID):
         amenities=amenities,
         gallery=gallery,
         reviews=reviews,
+        views=property.views,
         favourite=fav
     )
 
@@ -110,6 +116,7 @@ async def get_property_list(request):
                 cover=p.cover_image.url if p.cover_image else "",
                 average_rating=f"{avg_rating:.1f}",
                 address=p.address,
+                views=p.views,
                 favourite=fav
             )
         )
@@ -230,6 +237,7 @@ async def get_favourite_property(request):
                     cover=prop.cover_image.url if prop.cover_image else "",
                     average_rating=f"{avg_rating_val:.1f}",
                     address=prop.address,
+                    views=prop.views,
                 )
             )
             
