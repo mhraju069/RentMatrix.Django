@@ -79,3 +79,16 @@ class Review(models.Model):
 
     
 
+class Favourites(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Favourite for {self.property.name} by {self.user.username}"
+    
+    class Meta:
+        unique_together = ('user', 'property')
+        verbose_name_plural = "Favourites"

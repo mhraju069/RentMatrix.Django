@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.db.models import Avg
 from django.core.files.base import ContentFile
 from django_bolt import Router
-from .models import Property, Amenity, Gallery
+from .models import *
 from .schema import *
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
 
@@ -24,7 +24,7 @@ def decode_base64_file(data_str: str, prefix: str = "file") -> ContentFile | Non
         return None
 
 
-api = Router(prefix='/api/v1/property')
+api = Router(prefix='/api/v1/guest/property')
 
 
 @api.get('/{id:uuid}', response_model=PropertyDetailSchema)
@@ -172,38 +172,29 @@ async def create_property(request, data: CreatePropertySchema):
     )
 
 
-#Demo json
-# {
-#   "name": "Luxury Oceanfront Villa",
-#   "address": "123 Marine Drive, Cox's Bazar",
-#   "bedroom": 4,
-#   "bathroom": 3,
-#   "size": "2500 sqft",
-#   "about": "A stunning oceanfront villa with panoramic views, spacious bedrooms, and modern amenities.",
-#   "cover": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-#   "latitude": 21.4272,
-#   "longitude": 91.9705,
-#   "price": 250000.0,
-#   "type": "VILLA",
-#   "amenities": [
-#     {
-#       "name": "Swimming Pool"
-#     },
-#     {
-#       "name": "Wi-Fi"
-#     },
-#     {
-#       "name": "Air Conditioning"
-#     }
-#   ],
-#   "gallery": [
-#     {
-#       "type": "IMAGE",
-#       "file": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-#     },
-#     {
-#       "type": "IMAGE",
-#       "file": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-#     }
-#   ]
-# }
+
+@api.post('/favourite/{property_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Add / Remove Favourite Property")
+async def update_favourite_property(request, property_id: uuid.UUID, data:AddFavouriteSchema):
+    try:
+        try:
+            property_obj = await Property.objects.aget(id=property_id)
+        except Property.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Property not found"}, status=404)
+
+        obj, created = await Favourites.objects.aget_or_create(
+            property=property_obj,
+            user=request.user
+        )
+
+        if not created:
+            await obj.adelete()
+            message = "Property unfavourited successfully"
+        else:
+            message = "Property favourited successfully"
+
+        return JsonResponse({"success": True, "message": message}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+    
+    

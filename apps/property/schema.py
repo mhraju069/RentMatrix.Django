@@ -82,3 +82,16 @@ class CreatePropertySchema(msgspec.Struct):
     type: str
     amenities: Optional[List[PropertyAmenitySchema]] = None
     gallery: Optional[List[PropertyGallerySchema]] = None
+
+
+
+class AddFavouriteSchema(msgspec.Struct):
+    property: uuid.UUID
+
+
+
+class FavouriteListResponseSchema(msgspec.Struct):
+    status : int
+    message : str
+    success : bool
+    properties : List[PropertyListSchema]
