@@ -8,10 +8,11 @@ from django.http import JsonResponse
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
 from django.db.models import Avg
 
-api = Router(prefix='/api/v1/booking')
+api_guest = Router(prefix='/api/v1/guest/booking')
 
 
-@api.post('/create', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
+
+@api_guest.post('/create', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
 async def create_booking(request, data: CreateBookingSchema):
     property = await Property.objects.filter(id=data.property_id).afirst()
 
@@ -52,7 +53,7 @@ async def create_booking(request, data: CreateBookingSchema):
 
 
 
-@api.post('/confirm/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
+@api_guest.post('/confirm/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
 async def confirm_booking(request, booking_id, data: ConfirmBookingSchema):
     booking = await Booking.objects.filter(id=booking_id).afirst()
     if not booking:
@@ -83,7 +84,7 @@ async def confirm_booking(request, booking_id, data: ConfirmBookingSchema):
 
 
 
-@api.post('/payment/success')
+@api_guest.post('/payment/success')
 async def payment_success(request):
     
     return JsonResponse({
@@ -95,7 +96,7 @@ async def payment_success(request):
 
 
 
-@api.get('', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingListResponseSchema)
+@api_guest.get('', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingListResponseSchema)
 async def booking_list(request):
     bookings = Booking.objects.filter(user=request.user).select_related('property').annotate(
         property_avg_rating=Avg('property__reviews__rating')
@@ -138,7 +139,7 @@ async def booking_list(request):
 
 
 
-@api.get('/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingDetailsResponseSchema)
+@api_guest.get('/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingDetailsResponseSchema)
 async def booking_details(request, booking_id):
     booking = await Booking.objects.filter(id=booking_id, user=request.user).select_related('property', 'property__owner').annotate(
         property_avg_rating=Avg('property__reviews__rating')
