@@ -72,4 +72,5 @@ class MyBookingListResponseSchema(msgspec.Struct):
     status : int
     message : str
     success : bool
+    count : int
     data : List

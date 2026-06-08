@@ -196,5 +196,6 @@ async def my_booking_list(request,status:str="ALL"):
         status=200,
         success=True,
         message="Booking list fetched successfully",
+        count = len(booking_data),
         data=booking_data
     )
