@@ -7,9 +7,10 @@ from apps.property.models import Property
 from django.http import JsonResponse
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
 from django.db.models import Avg
+from django.utils import timezone
 
 api_guest = Router(prefix='/api/v1/guest/booking')
-
+api_owner = Router(prefix='/api/v1/owner/booking')
 
 
 @api_guest.post('/create', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
@@ -188,4 +189,39 @@ async def booking_details(request, booking_id):
         message="Booking details fetched successfully",
         data=details
     )
+
+
+
+@api_guest.patch('/cancel/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()])
+async def cancel_booking(request, booking_id):
+    booking = await Booking.objects.filter(id=booking_id, user=request.user).afirst()
+    if not booking:
+        return JsonResponse(data={"status": 404, "success": False, "message": "Booking not found"}, status=404)
+
+    if booking.status == "CANCELLED":
+        return JsonResponse(data={"status": 400, "success": False, "message": "Booking already cancelled"}, status=400)
+
+
+    refunded = False
+    if booking.status == "CONFIRMED":
+        payment = await Payment.objects.filter(booking_id=booking.id, status='succeeded').afirst()
+        if payment and payment.payment_intent_id:
+            refund_res = await Refund_payment(payment.payment_intent_id)
+            if not refund_res["success"]:
+                return JsonResponse(data={"status": 400, "success": False, "message": f"Refund failed: {refund_res['message']}"}, status=400)
+            payment.refund_id = refund_res["refund_id"]
+            payment.is_refunded = True
+            payment.refunded_at = timezone.now()
+            await payment.asave()
+            refunded = True
+
+    booking.status = "CANCELLED"
+    await booking.asave()
+    
+    return JsonResponse({
+        "status": 200,
+        "success": True,
+        "message": "Booking cancelled and payment refunded successfully" if refunded else "Booking cancelled successfully",
+    })
+
 

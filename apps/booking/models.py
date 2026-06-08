@@ -39,7 +39,12 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, default='pending')
     tnxid = models.CharField(max_length=100, blank=True, null=True)
+    payment_intent_id = models.CharField(max_length=100, blank=True, null=True)
     invoice = models.URLField(blank=True, null=True)
+
+    refund_id = models.CharField(max_length=100, blank=True, null=True)
+    is_refunded = models.BooleanField(default=False)
+    refunded_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

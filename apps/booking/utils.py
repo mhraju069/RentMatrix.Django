@@ -31,9 +31,11 @@ async def Create_payment_intent(request, booking_id, amount, payment_method_id):
 
         if intent.status == 'succeeded':
             payment.status = 'succeeded'
-            payment.tnxid = intent.id
+            payment.payment_intent_id = intent.id
             if hasattr(intent, 'charges') and intent.charges.data:
+                payment.tnxid = intent.charges.data[0].id
                 payment.invoice = intent.charges.data[0].receipt_url
+                
             await payment.asave()
             return {
                 "status": 200,
@@ -44,7 +46,8 @@ async def Create_payment_intent(request, booking_id, amount, payment_method_id):
             }
         elif intent.status in ('requires_action', 'requires_source_action'):
             payment.status = 'requires_action'
-            payment.tnxid = intent.id
+            payment.payment_intent_id = intent.id
+            payment.tnxid = None
             await payment.asave()
             return {
                 "status": 200,
@@ -77,4 +80,33 @@ async def Create_payment_intent(request, booking_id, amount, payment_method_id):
             "status": 500,
             "success": False,
             "message": f"Error: {str(e)}",
+        }
+
+
+async def Refund_payment(payment_intent_id):
+    try:
+        refund = await asyncio.to_thread(
+            stripe.Refund.create,
+            payment_intent=payment_intent_id
+        )
+        if refund.status in ('succeeded', 'pending'):
+            return {
+                "success": True,
+                "refund_id": refund.id,
+                "status": refund.status
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Refund status: {refund.status}"
+            }
+    except stripe.error.StripeError as e:
+        return {
+            "success": False,
+            "message": f"Stripe Error: {e.user_message if hasattr(e, 'user_message') else str(e)}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error: {str(e)}"
         }
