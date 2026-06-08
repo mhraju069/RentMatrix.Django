@@ -329,3 +329,37 @@ async def get_owner_property_details(request,property_id: uuid.UUID):
         avg_stay="Not Implemented Yet",
         property=obj
     )
+
+
+
+
+@owner_api.get('', response_model=MyPropertyResponseSchema,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Owner's Property List")
+async def get_owner_properties(request):
+
+    properties = Property.objects.filter(owner=request.user)
+    
+    data = []
+    async for property in properties:
+        review_stats = await property.reviews.aaggregate(Avg('rating'))
+        avg_rating_val = review_stats['rating__avg'] or 0.0
+
+        data.append(
+            MyPropertyListSchema(
+                id=property.id,
+                name=property.name,
+                cover=property.cover_image.url if property.cover_image else "",
+                avg_rating=f"{avg_rating_val:.1f}",
+                address=property.address,
+            )
+        )
+    
+    
+    return MyPropertyResponseSchema(
+        status=200,
+        message="Properties fetched successfully",
+        success=True,
+        properties=data
+    )
+
+    
+    

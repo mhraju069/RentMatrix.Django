@@ -111,3 +111,21 @@ class MyPropertyDetailResponseSchema(msgspec.Struct):
     avg_stay : str
     property : PropertyDetailSchema
 
+
+
+
+class MyPropertyListSchema(msgspec.Struct):
+    id : uuid.UUID
+    cover : str
+    name : str
+    address : str
+    avg_rating : str
+
+
+class MyPropertyResponseSchema(msgspec.Struct):
+    status : int
+    message : str
+    success : bool
+    properties : List[MyPropertyListSchema]
+
+    
