@@ -1,3 +1,4 @@
+from apps.booking.schema import MyBookingListResponseSchema
 from django_bolt import Router
 from .schema import *
 from .models import Booking
@@ -169,3 +170,31 @@ async def cancel_booking(request, booking_id):
     })
 
 
+
+@api_owner.get('', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=MyBookingListResponseSchema, summary="Owner's Booking List")
+async def my_booking_list(request,status:str="ALL"):
+    status_type = ['ALL','PENDING', 'CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED']
+
+    if status not in status_type:
+        return JsonResponse(data={"status": 400, "success": False, "message": "Invalid status"}, status=400)
+    
+    bookings = Booking.objects.filter(property__owner=request.user).select_related('property')
+
+    if status != 'ALL':
+        bookings = bookings.filter(status=status)
+
+    booking_data = []
+    async for p in bookings:
+        booking_data.append({
+            "id": p.id,
+            "status": p.status,
+            "name": p.property.name,
+            "address": p.property.address,
+            "cover": p.property.cover_image.url if p.property.cover_image else "",
+        })
+    return MyBookingListResponseSchema(
+        status=200,
+        success=True,
+        message="Booking list fetched successfully",
+        data=booking_data
+    )

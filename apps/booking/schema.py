@@ -2,7 +2,7 @@ import msgspec
 from typing import List, Optional
 from datetime import date
 from uuid import UUID
-from apps.property.schema import PropertyListSchema
+from apps.property.schema import PropertyListSchema, MyPropertyListSchema
 from apps.auth.schema import UserDataSchema
 
 
@@ -66,3 +66,10 @@ class BookingDetailsResponseSchema(msgspec.Struct):
     message : str
     success : bool
     data : BookingDetailsSchema
+
+
+class MyBookingListResponseSchema(msgspec.Struct):
+    status : int
+    message : str
+    success : bool
+    data : List
