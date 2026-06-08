@@ -2,6 +2,8 @@ import msgspec
 from typing import List, Optional
 from datetime import date
 from uuid import UUID
+from apps.property.schema import PropertyListSchema
+from apps.auth.schema import UserDataSchema
 
 
 class CreateBookingSchema(msgspec.Struct):
@@ -17,3 +19,25 @@ class CreateBookingSchema(msgspec.Struct):
 
 class ConfirmBookingSchema(msgspec.Struct):
     payment_method_id: str
+
+
+
+class BookingListSchema(msgspec.Struct):
+    id: UUID
+    property: PropertyListSchema
+    name: str
+    phone: str
+    email: str
+    guest_count: int
+    check_in: str
+    check_out: str
+    price: float
+    status: str
+
+
+
+class BookingListResponseSchema(msgspec.Struct):
+    status : int
+    message : str
+    success : bool
+    data : List[BookingListSchema]

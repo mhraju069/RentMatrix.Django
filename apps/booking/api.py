@@ -2,9 +2,11 @@ from django_bolt import Router
 from .schema import *
 from .models import Booking
 from .utils import *
+from apps.property.schema import PropertyListSchema
 from apps.property.models import Property
 from django.http import JsonResponse
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
+from django.db.models import Avg
 
 api = Router(prefix='/api/v1/booking')
 
@@ -89,3 +91,47 @@ async def payment_success(request):
         "success": True,
         "message": "Payment success",
     })
+
+
+
+
+@api.get('/list', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingListResponseSchema)
+async def booking_list(request):
+    bookings = Booking.objects.filter(user=request.user).select_related('property').annotate(
+        property_avg_rating=Avg('property__reviews__rating')
+    )
+    booking_data = []
+    async for booking in bookings:
+        p = booking.property
+        avg_rating = booking.property_avg_rating or 0.0
+        booking_data.append(
+            BookingListSchema(
+                id=booking.id,
+                property=PropertyListSchema(
+                    id=p.id,
+                    name=p.name,
+                    address=p.address,
+                    price=float(p.price or 0.0),
+                    bathroom=p.bathroom or 0,
+                    bedroom=p.bedroom or 0,
+                    size=p.area or "",
+                    type=p.type,
+                    average_rating=f"{avg_rating:.1f}",
+                    cover=p.cover_image.url if p.cover_image else "",
+                ),
+                name=booking.name,
+                phone=booking.phone,
+                email=booking.email,
+                guest_count=booking.guest_count,
+                check_in=booking.check_in.isoformat() if booking.check_in else "",
+                check_out=booking.check_out.isoformat() if booking.check_out else "",
+                price=float(booking.price),
+                status=booking.status,
+            )
+        )
+    return BookingListResponseSchema(
+        status=200,
+        success=True,
+        message="Booking list fetched successfully",
+        data=booking_data
+    )
