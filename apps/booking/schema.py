@@ -2,7 +2,7 @@ import msgspec
 from typing import List, Optional
 from datetime import date
 from uuid import UUID
-from apps.property.schema import PropertyListSchema, MyPropertyListSchema
+from apps.property.schema import PropertyListSchema, PropertyDetailSchema
 from apps.auth.schema import UserDataSchema
 
 
