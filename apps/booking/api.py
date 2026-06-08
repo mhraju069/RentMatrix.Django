@@ -95,7 +95,7 @@ async def payment_success(request):
 
 
 
-@api.get('/list', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingListResponseSchema)
+@api.get('', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingListResponseSchema)
 async def booking_list(request):
     bookings = Booking.objects.filter(user=request.user).select_related('property').annotate(
         property_avg_rating=Avg('property__reviews__rating')
@@ -135,3 +135,56 @@ async def booking_list(request):
         message="Booking list fetched successfully",
         data=booking_data
     )
+
+
+
+@api.get('/{booking_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=BookingDetailsResponseSchema)
+async def booking_details(request, booking_id):
+    booking = await Booking.objects.filter(id=booking_id, user=request.user).select_related('property', 'property__owner').annotate(
+        property_avg_rating=Avg('property__reviews__rating')
+    ).afirst()
+    if not booking:
+        return JsonResponse(data={"status": 404, "success": False, "message": "Booking not found"}, status=404)
+
+    p = booking.property
+    avg_rating = booking.property_avg_rating or 0.0
+    
+    details = BookingDetailsSchema(
+        id=booking.id,
+        property=PropertyListSchema(
+            id=p.id,
+            name=p.name,
+            address=p.address,
+            price=float(p.price or 0.0),
+            bathroom=p.bathroom or 0,
+            bedroom=p.bedroom or 0,
+            size=p.area or "",
+            type=p.type,
+            average_rating=f"{avg_rating:.1f}",
+            cover=p.cover_image.url if p.cover_image else "",
+        ),
+        owner=UserDataSchema(
+            name=p.owner.name or "",
+            email=p.owner.email,
+            phone=p.owner.phone or "",
+            role=p.owner.role or "",
+            image=p.owner.image.url if p.owner.image else None,
+        ),
+        name=booking.name,
+        phone=booking.phone,
+        email=booking.email,
+        guest_count=booking.guest_count,
+        check_in=booking.check_in.isoformat() if booking.check_in else "",
+        check_out=booking.check_out.isoformat() if booking.check_out else "",
+        price=float(booking.price),
+        status=booking.status,
+        created_at=booking.created_at.isoformat() if booking.created_at else "",
+        updated_at=booking.updated_at.isoformat() if booking.updated_at else "",
+    )
+    return BookingDetailsResponseSchema(
+        status=200,
+        success=True,
+        message="Booking details fetched successfully",
+        data=details
+    )
+
