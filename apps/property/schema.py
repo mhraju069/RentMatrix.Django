@@ -43,6 +43,7 @@ class PropertyDetailSchema(msgspec.Struct):
     address : str
     latitude : float
     longitude : float
+    favourite : Optional[bool] = None
     amenities : Optional[List[PropertyAmenitySchema]] = None
     gallery: Optional[List[PropertyGallerySchema]] = None
     reviews : Optional[List[ReviewSchema]] = None
@@ -59,6 +60,7 @@ class PropertyListSchema(msgspec.Struct):
     size : str
     type : str
     average_rating : str
+    favourite : Optional[bool] = None
 
 
 class PropertyListResponse(msgspec.Struct):

@@ -1,3 +1,4 @@
+from apps.property.models import Favourites
 import base64
 import uuid
 from django.http import JsonResponse
@@ -27,9 +28,9 @@ def decode_base64_file(data_str: str, prefix: str = "file") -> ContentFile | Non
 api = Router(prefix='/api/v1/guest/property')
 
 
-@api.get('/{id:uuid}', response_model=PropertyDetailSchema)
-async def get_property_details(id: uuid.UUID):
-    property = await Property.objects.select_related('owner').filter(id=id).afirst()
+@api.get('/{property_id:uuid}', response_model=PropertyDetailSchema,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Property Details")
+async def get_property_details(request,property_id: uuid.UUID):
+    property = await Property.objects.select_related('owner').filter(id=property_id).afirst()
     if not property:
         return JsonResponse(data={"status": 404, "success": False, "message": "Property not found"})
     
@@ -59,6 +60,8 @@ async def get_property_details(id: uuid.UUID):
     
     review_count = len(reviews)
     avg_rating = sum(r.rating for r in reviews) / review_count if review_count > 0 else 0.0
+
+    fav = await Favourites.objects.filter(user=request.user, property=property).aexists()
     
     return PropertyDetailSchema(
         name=property.name,
@@ -82,17 +85,19 @@ async def get_property_details(id: uuid.UUID):
         longitude=property.longitude or 0.0,
         amenities=amenities,
         gallery=gallery,
-        reviews=reviews
+        reviews=reviews,
+        favourite=fav
     )
 
 
 
-@api.get('/', response_model=PropertyListResponse)
-async def get_property_list():
+@api.get('/', response_model=PropertyListResponse,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Property List")
+async def get_property_list(request):
     data = []
     # Fetch all properties with average rating annotated in a single database query
     async for p in Property.objects.annotate(avg_rating=Avg('reviews__rating')).all():
         avg_rating = p.avg_rating or 0.0
+        fav = await Favourites.objects.filter(user=request.user, property=p).aexists()
         data.append(
             PropertyListSchema(
                 id=p.id,
@@ -104,7 +109,8 @@ async def get_property_list():
                 type=p.type,
                 cover=p.cover_image.url if p.cover_image else "",
                 average_rating=f"{avg_rating:.1f}",
-                address=p.address
+                address=p.address,
+                favourite=fav
             )
         )
 
@@ -117,7 +123,7 @@ async def get_property_list():
 
 
 
-@api.post('/create', response_model=PropertyListResponse, auth=[JWTAuthentication()], guards=[IsAuthenticated()])
+@api.post('/create', response_model=PropertyListResponse, auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Create New Property")
 async def create_property(request, data: CreatePropertySchema):
     cover_file = decode_base64_file(data.cover, prefix="cover") if data.cover else None
 
