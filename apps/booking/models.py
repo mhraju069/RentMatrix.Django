@@ -8,6 +8,7 @@ from django.conf import settings
 STATUS_CHOICES = [
     ('PENDING', 'Pending'),
     ('CONFIRMED', 'Confirmed'),
+    ('ACTIVE', 'Active'),
     ('CANCELLED', 'Cancelled'),
 ]
 
