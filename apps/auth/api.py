@@ -9,8 +9,6 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django_bolt.auth import create_jwt_for_user, JWTAuthentication, IsAuthenticated, Token
 from django.conf import settings
-from django.core.files.base import ContentFile
-from apps.property.api import decode_base64_file
 
 
 api = Router(prefix="/api/v1/auth")
@@ -41,7 +39,7 @@ async def signup(request, data: CreateUserSchema):
         role=user.role,
         name=user.name,
         phone=user.phone,
-        image=user.image.url if user.image else None
+        image=f"{settings.BACKEND_URI}{user.image.url}" if user.image else None
     )
 
     access_token = create_jwt_for_user(user, expires_in=ACCESS_TOKEN_LIFETIME)
@@ -79,7 +77,7 @@ async def login(request,data: LoginUserSchema):
         role=user.role,
         name=user.name,
         phone=user.phone,
-        image=user.image.url if user.image else None
+        image=f"{settings.BACKEND_URI}{user.image.url}" if user.image else None
     )
 
     access_token = create_jwt_for_user(user, expires_in=ACCESS_TOKEN_LIFETIME)
@@ -135,7 +133,7 @@ async def me(request):
         role=user.role,
         name=user.name,
         phone=user.phone,
-        image=user.image.url if user.image else None
+        image=f"{settings.BACKEND_URI}{user.image.url}" if user.image else None
     )
     return UserDataResponseSchema(
         message="User fetched successfully",
@@ -200,7 +198,7 @@ async def verify_otp(request, data: VerifyOtpSchema):
         role=user.role,
         name=user.name,
         phone=user.phone,
-        image=user.image.url if user.image else None
+        image=f"{settings.BACKEND_URI}{user.image.url}" if user.image else None
     )
 
     return UserDataResponseSchema(
@@ -251,7 +249,7 @@ def me_update(request):
         role=user.role,
         name=user.name,
         phone=user.phone,
-        image=user.image.url if user.image else None
+        image=f"{settings.BACKEND_URI}{user.image.url}" if user.image else None
     )
     return UserDataResponseSchema(
         message="User updated successfully",
@@ -259,7 +257,6 @@ def me_update(request):
         success=True,
         user=user_data,
     )
-
 
 
 @api.post("/reset-password",auth=[JWTAuthentication()], guards=[IsAuthenticated()],response_model=UserDataResponseSchema)
@@ -277,7 +274,7 @@ async def reset_password(request, data: ResetPasswordSchema):
         role=user.role,
         name=user.name,
         phone=user.phone,
-        image=user.image.url if user.image else None
+        image=f"{settings.BACKEND_URI}{user.image.url}" if user.image else None
     )
     return UserDataResponseSchema(
         message="Password reset successfully",

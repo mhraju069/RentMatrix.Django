@@ -66,6 +66,7 @@ class BookingDetailsResponseSchema(msgspec.Struct):
     message : str
     success : bool
     data : BookingDetailsSchema
+    docs: Optional[List]
 
 
 class MyBookingListResponseSchema(msgspec.Struct):

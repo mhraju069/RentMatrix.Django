@@ -3,6 +3,7 @@ from .schema import *
 from .models import Booking
 from apps.property.schema import PropertyListSchema
 from apps.property.models import Property
+from apps.auth.models import Document
 from django.http import JsonResponse
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
 from django.db.models import Avg
@@ -76,7 +77,7 @@ async def booking_list(request):
                     type=p.type,
                     views=p.views,
                     average_rating=f"{avg_rating:.1f}",
-                    cover=p.cover_image.url if p.cover_image else "",
+                    cover=f"{settings.BACKEND_URI}{p.cover_image.url}" if p.cover_image else "",
                 ),
                 name=booking.name,
                 phone=booking.phone,
@@ -121,14 +122,14 @@ async def booking_details(request, booking_id):
             type=p.type,
             average_rating=f"{avg_rating:.1f}",
             views=p.views,
-            cover=p.cover_image.url if p.cover_image else "",
+            cover=f"{settings.BACKEND_URI}{p.cover_image.url}" if p.cover_image else "",
         ),
         owner=UserDataSchema(
             name=p.owner.name or "",
             email=p.owner.email,
             phone=p.owner.phone or "",
             role=p.owner.role or "",
-            image=p.owner.image.url if p.owner.image else None,
+            image=f"{settings.BACKEND_URI}{p.owner.image.url}" if p.owner.image else None,
         ),
         name=booking.name,
         phone=booking.phone,
@@ -190,7 +191,7 @@ async def my_booking_list(request,status:str="ALL"):
             "status": p.status,
             "name": p.property.name,
             "address": p.property.address,
-            "cover": p.property.cover_image.url if p.property.cover_image else "",
+            "cover": f"{settings.BACKEND_URI}{p.property.cover_image.url}" if p.property.cover_image else "",
         })
     return MyBookingListResponseSchema(
         status=200,
@@ -205,7 +206,7 @@ async def my_booking_list(request,status:str="ALL"):
 @api_owner.patch('/{booking_id:uuid}',response_model=BookingDetailsResponseSchema, auth=[JWTAuthentication()], guards=[IsAuthenticated()], summary="Owner's Booking Details")
 async def owner_booking_details(request, booking_id):
 
-    booking = await Booking.objects.filter(id=booking_id, property__owner=request.user).select_related('property', 'property__owner').annotate(
+    booking = await Booking.objects.filter(id=booking_id, property__owner=request.user).select_related('property', 'property__owner', 'user').annotate(
         property_avg_rating=Avg('property__reviews__rating')
     ).afirst()
 
@@ -215,6 +216,11 @@ async def owner_booking_details(request, booking_id):
     p = booking.property
     avg_rating = booking.property_avg_rating or 0.0
 
+    docs = [
+        (f"{settings.BACKEND_URI}{doc.document_file.url}" if doc.document_file else "", doc.document_type)
+        async for doc in Document.objects.filter(user_id=booking.user_id)
+    ]
+    
     booking_data = BookingDetailsSchema(
         id=booking.id,
         property=PropertyListSchema(
@@ -228,14 +234,14 @@ async def owner_booking_details(request, booking_id):
             type=p.type,
             views=p.views,
             average_rating=f"{avg_rating:.1f}",
-            cover=p.cover_image.url if p.cover_image else "",
+            cover=f"{settings.BACKEND_URI}{p.cover_image.url}" if p.cover_image else "",
         ),
         owner=UserDataSchema(
             name=p.owner.name or "",
             email=p.owner.email,
             phone=p.owner.phone or "",
             role=p.owner.role or "",
-            image=p.owner.image.url if p.owner.image else None,
+            image=f"{settings.BACKEND_URI}{p.owner.image.url}" if p.owner.image else None,
         ),
         name=booking.name,
         phone=booking.phone,
@@ -253,7 +259,8 @@ async def owner_booking_details(request, booking_id):
         status=200,
         success=True,
         message="Booking details fetched successfully",
-        data=booking_data
+        data=booking_data,
+        docs=docs
     )
 
 

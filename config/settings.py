@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
+BACKEND_URI=os.getenv("BACKEND_URI", "http://localhost:8000")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_key")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
