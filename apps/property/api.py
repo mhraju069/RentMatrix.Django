@@ -321,5 +321,28 @@ async def get_owner_properties(request):
         properties=data
     )
 
-    
-    
+
+
+
+@owner_api.delete('/delete/{property_id:uuid}',auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Delete Property")
+async def delete_property(request,property_id: uuid.UUID):
+    try:
+        property = await Property.objects.aget(id=property_id)
+    except Property.DoesNotExist:
+        return JsonResponse({"status": 404,"success": False, "message": "Property not found"}, status=404)
+    await property.adelete()
+    return JsonResponse({"status": 200,"success": True, "message": "Property deleted successfully"}, status=200)
+
+
+
+@owner_api.post('/update/{property_id:uuid}', auth=[JWTAuthentication()], guards=[IsAuthenticated()], summary="Update Property")
+async def update_property(request, property_id: uuid.UUID,data : UpdatePropertySchema= msgspec.convert):
+    try:
+        await sync_to_async(_handle_multipart_property_update, thread_sensitive=False)(request, property_id)
+        
+        return JsonResponse({"status": 200, "success": True, "message": "Property updated successfully"}, status=200)
+
+    except KeyError as key_err:
+        return JsonResponse({"status": 404, "success": False, "message": str(key_err)}, status=404)
+    except Exception as e:
+        return JsonResponse({"status": 500, "success": False, "error": str(e)}, status=500)

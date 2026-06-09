@@ -173,7 +173,7 @@ async def cancel_booking(request, booking_id):
 
 
 @api_owner.get('', auth=[JWTAuthentication()], guards=[IsAuthenticated()], response_model=MyBookingListResponseSchema, summary="Owner's Booking List")
-async def my_booking_list(request,status:str="ALL"):
+async def my_booking_list(request,status:str="PENDING"):
     status_type = ['ALL','PENDING', 'CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED']
 
     if status not in status_type:

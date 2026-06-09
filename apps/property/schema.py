@@ -128,4 +128,19 @@ class MyPropertyResponseSchema(msgspec.Struct):
     success : bool
     properties : List[MyPropertyListSchema]
 
-    
+
+
+class UpdatePropertySchema(msgspec.Struct):
+    name: Optional[str] = None
+    about: Optional[str] = None
+    address: Optional[str] = None
+    price: Optional[float] = None
+    bathroom: Optional[int] = None
+    bedroom: Optional[int] = None
+    size: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    amenities: Optional[List[dict]] = None 
+    gallery: Optional[List[dict]] = None

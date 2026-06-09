@@ -63,3 +63,68 @@ def _handle_multipart_property_creation(request):
                 )
                 
     return property_obj
+
+
+
+
+def _handle_multipart_property_update(request, property_id):
+    try:
+        property_obj = Property.objects.get(id=property_id, owner=request.user)
+    except Property.DoesNotExist:
+        raise KeyError("Property not found or unauthorized")
+
+    parsed_dict = {}
+    field_keys = ["name", "about", "address", "type", "status", "size"]
+    int_keys = ["bedroom", "bathroom"]
+    float_keys = ["price", "latitude", "longitude"]
+
+    for k in field_keys:
+        if k in request.POST: parsed_dict[k] = request.POST.get(k)
+    for k in int_keys:
+        if k in request.POST: parsed_dict[k] = int(request.POST.get(k, 0))
+    for k in float_keys:
+        if k in request.POST: parsed_dict[k] = float(request.POST.get(k, 0.0))
+
+    amenities_raw = request.POST.get("amenities")
+    gallery_raw = request.POST.get("gallery")
+    if amenities_raw: parsed_dict["amenities"] = json.loads(amenities_raw)
+    if gallery_raw: parsed_dict["gallery"] = json.loads(gallery_raw)
+
+    data = msgspec.convert(parsed_dict, UpdatePropertySchema)
+
+    field_mapping = {
+        "name": "name", "about": "about", "address": "address",
+        "price": "price", "bathroom": "bathroom", "bedroom": "bedroom",
+        "size": "area", "type": "type", "status": "status",
+        "latitude": "latitude", "longitude": "longitude",
+    }
+
+    for schema_key, model_key in field_mapping.items():
+        val = getattr(data, schema_key, None)
+        if val is not None:
+            setattr(property_obj, model_key, val)
+
+    uploaded_cover = request.FILES.get("cover")
+    if uploaded_cover:
+        property_obj.cover_image = uploaded_cover
+
+    property_obj.save()
+
+    if data.amenities is not None:
+        Amenity.objects.filter(property=property_obj).delete()
+        for amenity_data in data.amenities:
+            Amenity.objects.create(property=property_obj, name=amenity_data.get("name"))
+
+    if data.gallery is not None:
+        Gallery.objects.filter(property=property_obj).delete()
+        gallery_files = request.FILES.getlist("gallery_files")
+        
+        for index, gallery_item in enumerate(data.gallery):
+            if index < len(gallery_files):
+                Gallery.objects.create(
+                    property=property_obj,
+                    type=gallery_item.get("type", "BEDROOM"),
+                    file=gallery_files[index]
+                )
+
+    return property_obj
