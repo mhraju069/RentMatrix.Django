@@ -30,3 +30,8 @@ class UserAdmin(ModelAdmin):
             "classes": ("wide",), "fields": ("name", "email", "password", "phone")
         }),
     )
+
+
+
+admin.site.register(Document, ModelAdmin)
+    

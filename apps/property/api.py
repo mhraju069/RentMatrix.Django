@@ -294,9 +294,21 @@ async def get_owner_property_details(request,property_id: uuid.UUID):
 
 
 @owner_api.get('', response_model=MyPropertyResponseSchema,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Owner's Property List")
-async def get_owner_properties(request):
+async def get_owner_properties(request,status: str = "ANY",type: str = "ANY"):
 
+    STATUS = ["ANY","OPEN","CLOSED"]
+    TYPES = ['ANY','HOUSE','VILLA','APARTMENT','COMMERCIAL']
+
+    if status not in STATUS or type not in TYPES:
+        return JsonResponse({"status": 400,"success": False, "message": "Invalid status or type"}, status=400)
+        
     properties = Property.objects.filter(owner=request.user)
+
+    if status != 'ANY':
+        properties = properties.filter(status=status)
+
+    if type != 'ANY':
+        properties = properties.filter(type=type)
     
     data = []
     async for property in properties:

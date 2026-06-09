@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django_bolt.auth import JWTAuthentication, IsAuthenticated
 from django.db.models import Avg
 from django.utils import timezone
+from django.conf import settings
 
 api_guest = Router(prefix='/api/v1/guest/booking')
 api_owner = Router(prefix='/api/v1/owner/booking')

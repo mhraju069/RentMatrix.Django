@@ -16,8 +16,10 @@ class Property(models.Model):
     ]
 
     STATUS = [
-        ('ACTIVE', 'Active'),
-        ('INACTIVE', 'Inactive'),
+        ('OPEN', 'Open'),
+        ('BOOKED', 'Booked'),
+        ('CLOSED', 'Closed'),
+        
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
