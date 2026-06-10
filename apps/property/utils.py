@@ -21,8 +21,6 @@ def _handle_multipart_property_creation(request):
             "price": float(request.POST.get("price", 0.0)),
             "sea_view": request.POST.get("sea_view", "false").lower() in ("true", "1"),
             "type": request.POST.get("type"),
-            "check_in": request.POST.get("check_in") or None,
-            "check_out": request.POST.get("check_out") or None,
             "amenities": json.loads(amenities_raw) if amenities_raw else None,
             "gallery": json.loads(gallery_raw) if gallery_raw else None,
         }
@@ -48,8 +46,6 @@ def _handle_multipart_property_creation(request):
         price=data.price,
         sea_view=data.sea_view,
         type=data.type,
-        check_in=data.check_in,
-        check_out=data.check_out,
     )
 
     # নেস্টেড অ্যামেনিটিজ তৈরি
@@ -80,12 +76,12 @@ def _handle_multipart_property_update(request, property_id):
         raise KeyError("Property not found or unauthorized")
 
     parsed_dict = {}
-    field_keys = ["name", "about", "address", "type", "status", "size", "check_in", "check_out"]
+    field_keys = ["name", "about", "address", "type", "status", "size"]
     int_keys = ["bedroom", "bathroom"]
     float_keys = ["price", "latitude", "longitude"]
 
     for k in field_keys:
-        if k in request.POST: parsed_dict[k] = request.POST.get(k) or None
+        if k in request.POST: parsed_dict[k] = request.POST.get(k)
     for k in int_keys:
         if k in request.POST: parsed_dict[k] = int(request.POST.get(k, 0))
     for k in float_keys:
@@ -105,7 +101,6 @@ def _handle_multipart_property_update(request, property_id):
         "price": "price", "bathroom": "bathroom", "bedroom": "bedroom",
         "size": "area", "type": "type", "status": "status",
         "sea_view": "sea_view",
-        "check_in": "check_in", "check_out": "check_out",
         "latitude": "latitude", "longitude": "longitude",
     }
 

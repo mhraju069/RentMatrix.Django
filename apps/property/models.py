@@ -39,8 +39,6 @@ class Property(models.Model):
     verified = models.BooleanField(default=True)
     sea_view = models.BooleanField(default=False)
     views = models.IntegerField(default=0)
-    check_in = models.DateTimeField(null=True, blank=True)
-    check_out = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

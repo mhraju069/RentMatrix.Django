@@ -86,10 +86,61 @@ async def get_property_details(request,property_id: uuid.UUID):
 
 
 @guest_api.get('/', response_model=PropertyListResponse,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Property List")
-async def get_property_list(request):
+async def get_property_list(
+    request, 
+    type: str = "ANY", 
+    search: str = None, 
+    start_date: str = None, 
+    end_date: str = None, 
+    sea_view = False, 
+    bed: int = None,
+    bath: int = None
+):
+    properties = Property.objects.all()
+
+    if search:
+        from django.db.models import Q
+        properties = properties.filter(Q(name__icontains=search) | Q(address__icontains=search))
+
+    if bed:
+        properties = properties.filter(bedroom=bed)
+        
+    if bath:
+        properties = properties.filter(bathroom=bath)
+
+    if type != 'ANY':
+        properties = properties.filter(type=type)
+    
+    if sea_view:
+        val = str(sea_view).lower() in ("true", "1")
+        if val:
+            properties = properties.filter(sea_view=True)
+
+    from datetime import datetime
+    start_d = None
+    end_d = None
+    if start_date and end_date:
+        try:
+            start_d = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_d = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    if start_d and end_d:
+        from apps.booking.models import Booking
+        booked_property_ids = Booking.objects.filter(
+            status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN'],
+            check_in__lt=end_d,
+            check_out__gt=start_d
+        ).values_list('property_id', flat=True)
+
+        properties = properties.exclude(id__in=booked_property_ids).exclude(status="CLOSED")
+    else:
+        properties = properties.filter(status__in=["AVAILABLE", "OPEN", "ACTIVE"])
+
     data = []
     # Fetch all properties with average rating annotated in a single database query
-    async for p in Property.objects.annotate(avg_rating=Avg('reviews__rating')).all():
+    async for p in properties.annotate(avg_rating=Avg('reviews__rating')).all():
         avg_rating = p.avg_rating or 0.0
         fav = await Favourites.objects.filter(user=request.user, property=p).aexists()
         data.append(
@@ -275,8 +326,6 @@ async def get_owner_property_details(request,property_id: uuid.UUID):
         address=property.address,
         latitude=property.latitude or 0.0,
         longitude=property.longitude or 0.0,
-        check_in=property.check_in.isoformat() if property.check_in else None,
-        check_out=property.check_out.isoformat() if property.check_out else None,
         amenities=amenities,
         gallery=gallery,
         reviews=reviews,
@@ -318,7 +367,7 @@ async def get_owner_properties(request, status: str = "ANY", type: str = "ANY", 
     
     if bed:
         properties = properties.filter(bedroom=bed)
-        
+
     if bath:
         properties = properties.filter(bathroom=bath)
 
