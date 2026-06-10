@@ -8,6 +8,8 @@ from apps.booking.api import api_guest as guest_booking_router
 from apps.booking.api import api_owner as owner_booking_router
 from apps.property.api import guest_api as guest_property_router
 from apps.property.api import owner_api as owner_property_router
+from apps.notify.api import owner_api as owner_notify_router
+from apps.notify.api import guest_api as guest_notify_router
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -21,4 +23,6 @@ api.include_router(guest_booking_router)
 api.include_router(owner_booking_router)
 api.include_router(guest_property_router)
 api.include_router(owner_property_router)
+api.include_router(owner_notify_router)
+api.include_router(guest_notify_router)
 
