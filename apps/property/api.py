@@ -69,6 +69,7 @@ async def get_property_details(request,property_id: uuid.UUID):
         type=property.type,
         status=property.status,
         verified=property.verified,
+        sea_view=property.sea_view,
         review_count=str(review_count),
         cover=f"{settings.BACKEND_URI}{property.cover_image.url}" if property.cover_image else "",
         average_rating=f"{avg_rating:.1f}",
@@ -100,6 +101,7 @@ async def get_property_list(request):
                 bedroom=p.bedroom or 0,
                 size=p.area or "",
                 type=p.type,
+                sea_view=p.sea_view,
                 cover=f"{settings.BACKEND_URI}{p.cover_image.url}" if p.cover_image else "",
                 average_rating=f"{avg_rating:.1f}",
                 address=p.address,
@@ -135,6 +137,7 @@ async def create_property(request):
                     bedroom=property_obj.bedroom or 0,
                     size=property_obj.area or "",
                     type=property_obj.type,
+                    sea_view=property_obj.sea_view,
                     cover=f"{settings.BACKEND_URI}{property_obj.cover_image.url}" if property_obj.cover_image else "",
                     average_rating="0.0",
                     address=property_obj.address,
@@ -196,6 +199,7 @@ async def get_favourite_property(request):
                     bedroom=prop.bedroom or 0,
                     size=prop.area or "",
                     type=prop.type,
+                    sea_view=prop.sea_view,
                     cover=f"{settings.BACKEND_URI}{prop.cover_image.url}" if prop.cover_image else "",
                     average_rating=f"{avg_rating_val:.1f}",
                     address=prop.address,
@@ -264,12 +268,15 @@ async def get_owner_property_details(request,property_id: uuid.UUID):
         type=property.type,
         status=property.status,
         verified=property.verified,
+        sea_view=property.sea_view,
         review_count=str(review_count),
         cover=f"{settings.BACKEND_URI}{property.cover_image.url}" if property.cover_image else "",
         average_rating=f"{avg_rating:.1f}",
         address=property.address,
         latitude=property.latitude or 0.0,
         longitude=property.longitude or 0.0,
+        check_in=property.check_in.isoformat() if property.check_in else None,
+        check_out=property.check_out.isoformat() if property.check_out else None,
         amenities=amenities,
         gallery=gallery,
         reviews=reviews,
@@ -294,22 +301,67 @@ async def get_owner_property_details(request,property_id: uuid.UUID):
 
 
 @owner_api.get('', response_model=MyPropertyResponseSchema,auth=[JWTAuthentication()], guards=[IsAuthenticated()],summary="Get Owner's Property List")
-async def get_owner_properties(request,status: str = "ANY",type: str = "ANY"):
+async def get_owner_properties(request, status: str = "ANY", type: str = "ANY", search: str = None, start_date: str = None, end_date: str = None , sea_view=False, bed: int = None, bath: int = None):
 
-    STATUS = ["ANY","OPEN","CLOSED"]
+    STATUS = ["ANY","AVAILABLE","BOOKED","CLOSED"]
     TYPES = ['ANY','HOUSE','VILLA','APARTMENT','COMMERCIAL']
+
 
     if status not in STATUS or type not in TYPES:
         return JsonResponse({"status": 400,"success": False, "message": "Invalid status or type"}, status=400)
         
     properties = Property.objects.filter(owner=request.user)
 
-    if status != 'ANY':
-        properties = properties.filter(status=status)
+    if search:
+        from django.db.models import Q
+        properties = properties.filter(Q(name__icontains=search) | Q(address__icontains=search))
+    
+    if bed:
+        properties = properties.filter(bedroom=bed)
+        
+    if bath:
+        properties = properties.filter(bathroom=bath)
 
     if type != 'ANY':
         properties = properties.filter(type=type)
     
+    if sea_view:
+        val = str(sea_view).lower() in ("true", "1")
+        if val:
+            properties = properties.filter(sea_view=True)
+
+    from datetime import datetime
+    start_d = None
+    end_d = None
+    if start_date and end_date:
+        try:
+            start_d = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_d = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    if start_d and end_d:
+        from apps.booking.models import Booking
+        booked_property_ids = Booking.objects.filter(
+            status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN'],
+            check_in__lt=end_d,
+            check_out__gt=start_d
+        ).values_list('property_id', flat=True)
+
+        if status == "AVAILABLE":
+            properties = properties.exclude(id__in=booked_property_ids).exclude(status="CLOSED")
+        elif status == "BOOKED":
+            properties = properties.filter(id__in=booked_property_ids)
+        elif status == "CLOSED":
+            properties = properties.filter(status="CLOSED")
+    else:
+        if status == "AVAILABLE":
+            properties = properties.filter(status__in=["AVAILABLE", "OPEN", "ACTIVE"])
+        elif status == "BOOKED":
+            properties = properties.filter(status="BOOKED")
+        elif status == "CLOSED":
+            properties = properties.filter(status="CLOSED")
+
     data = []
     async for property in properties:
         review_stats = await property.reviews.aaggregate(Avg('rating'))

@@ -38,6 +38,7 @@ class PropertyDetailSchema(msgspec.Struct):
     type : str
     status: str
     verified: bool
+    sea_view: bool
     review_count: str
     average_rating : str
     address : str
@@ -45,6 +46,8 @@ class PropertyDetailSchema(msgspec.Struct):
     longitude : float
     views : int
     favourite : Optional[bool] = None
+    check_in: Optional[str] = None
+    check_out: Optional[str] = None
     amenities : Optional[List[PropertyAmenitySchema]] = None
     gallery: Optional[List[PropertyGallerySchema]] = None
     reviews : Optional[List[ReviewSchema]] = None
@@ -61,6 +64,7 @@ class PropertyListSchema(msgspec.Struct):
     size : str
     views : int
     type : str
+    sea_view : bool
     average_rating : str
     favourite : Optional[bool] = None
 
@@ -83,7 +87,10 @@ class CreatePropertySchema(msgspec.Struct):
     latitude: float
     longitude: float
     price: float
+    sea_view : bool
     type: str
+    check_in: Optional[str] = None
+    check_out: Optional[str] = None
     amenities: Optional[List[PropertyAmenitySchema]] = None
     gallery: Optional[List[PropertyGallerySchema]] = None
 
@@ -140,6 +147,9 @@ class UpdatePropertySchema(msgspec.Struct):
     size: Optional[str] = None
     type: Optional[str] = None
     status: Optional[str] = None
+    sea_view: Optional[bool] = None
+    check_in: Optional[str] = None
+    check_out: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     amenities: Optional[List[dict]] = None 
