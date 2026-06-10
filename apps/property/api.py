@@ -136,7 +136,7 @@ async def get_property_list(
 
         properties = properties.exclude(id__in=booked_property_ids).exclude(status="CLOSED")
     else:
-        properties = properties.filter(status__in=["AVAILABLE", "OPEN", "ACTIVE"])
+        properties = properties.filter(status="AVAILABLE")
 
     data = []
     # Fetch all properties with average rating annotated in a single database query
