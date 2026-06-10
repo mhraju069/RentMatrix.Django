@@ -1,14 +1,26 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 load_dotenv()
+import firebase_admin
+from firebase_admin import credentials
+cred_path = os.path.join(BASE_DIR, "firebase-key.json")
+
+try:
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+    print("✅ Firebase admin initialized successfully")
+except Exception as e:
+    print(f"⚠️ Firebase admin initialization failed: {e}")
 
 BACKEND_URI=os.getenv("BACKEND_URI", "http://localhost:8000")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_key")
 
-BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ad3l62**mkv&m91&(v7+a4zg1!0!(_!c_i$$d#!y*!n*9z1%t*'
 DEBUG = True
+
 
 ALLOWED_HOSTS = ['*']
 

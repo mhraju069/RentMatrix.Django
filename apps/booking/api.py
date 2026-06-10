@@ -16,7 +16,7 @@ api_owner = Router(prefix='/api/v1/owner/booking')
 
 @api_guest.post('/create', auth=[JWTAuthentication()], guards=[IsAuthenticated()], summary='Create Booking')
 async def create_booking(request, data: CreateBookingSchema):
-    property = await Property.objects.filter(id=data.property_id).afirst()
+    property = await Property.objects.filter(id=data.property_id).select_related('owner').afirst()
 
     if not property:
         return JsonResponse(data={"status": 404, "success": False, "message": "Property not found"}, status=404)
@@ -34,6 +34,13 @@ async def create_booking(request, data: CreateBookingSchema):
         check_in=data.start_date,
         check_out=data.end_date,
     )
+    
+    # Notify owner about new booking
+    try:
+        from notify.utils import booking_reminder
+        await booking_reminder(property.owner, booking)
+    except Exception as e:
+        print(f"Error calling booking_reminder: {e}")
     
     return JsonResponse({
         "status": 200,
