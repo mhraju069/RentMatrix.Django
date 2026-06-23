@@ -33,17 +33,58 @@ class Property(models.Model):
     cover_image = models.ImageField(upload_to='property_gallery/',blank=True)
     latitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)])
     longitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)])
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     type = models.CharField(max_length=255, choices=TYPE, default="HOUSE")
     status = models.CharField(max_length=255, choices=STATUS, default='ACTIVE')
     verified = models.BooleanField(default=True)
+    hosted_by = models.CharField(max_length=255, null=True, blank=True)
+    whatsapp = models.CharField(max_length=15, null=True, blank=True)
     sea_view = models.BooleanField(default=False)
+    price_monthly = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_daily = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def price(self):
+        return self.price_daily or self.price_monthly or 0.0
+
+    @price.setter
+    def price(self, value):
+        self.price_daily = value
+
     def __str__(self):
         return self.name
+
+
+class AdvantgePrice(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='advantge_prices')
+    service = models.CharField(max_length=255)
+    price = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.property.name + " - " + self.service + " : " + str(self.price)
+
+
+
+class AddOnsPrice(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='add_ons_prices')
+    service = models.CharField(max_length=255)
+    price = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.property.name + " - " + self.service + " : " + str(self.price)
+
+
+
+class SeasonalPrice(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='season_prices')
+    start = models.DateField()
+    end = models.DateField()
+    price = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.property.name + " - " + str(self.start) + " : " + str(self.end) + " : " + str(self.price)
 
 
 

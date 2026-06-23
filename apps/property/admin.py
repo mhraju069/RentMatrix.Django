@@ -5,7 +5,7 @@ from unfold.admin import ModelAdmin
 
 @admin.register(Property)
 class PropertyAdmin(ModelAdmin):
-    list_display = ('name', 'address', 'bedroom', 'bathroom', 'area', 'price', 'type', 'status', 'verified')
+    list_display = ('name', 'address', 'bedroom', 'bathroom', 'area', 'price_daily', 'price_monthly', 'type', 'status', 'verified')
     list_filter = ('type', 'status', 'verified')
     search_fields = ('name', 'address', 'about')
     ordering = ('-created_at',)
