@@ -1,0 +1,1762 @@
+openapi: 3.0.3
+info:
+  title: Rent API
+  version: 1.0.0
+  description: API for Rent Project
+paths:
+  /api/token/:
+    post:
+      operationId: api_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/token/refresh/:
+    post:
+      operationId: api_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefresh'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /auth/api/v1/get-otp/:
+    post:
+      operationId: auth_api_v1_get_otp_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetOtp'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GetOtp'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GetOtp'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOtp'
+          description: ''
+  /auth/api/v1/login/:
+    post:
+      operationId: auth_api_v1_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginUser'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+          description: ''
+  /auth/api/v1/me/:
+    get:
+      operationId: auth_api_v1_me_retrieve
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+          description: ''
+  /auth/api/v1/me/update/:
+    patch:
+      operationId: auth_api_v1_me_update_partial_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateUser'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+          description: ''
+  /auth/api/v1/reset-password/:
+    post:
+      operationId: auth_api_v1_reset_password_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResetPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResetPassword'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPassword'
+          description: ''
+  /auth/api/v1/signup/:
+    post:
+      operationId: auth_api_v1_signup_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+          description: ''
+  /auth/api/v1/upload-document/:
+    post:
+      operationId: auth_api_v1_upload_document_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadDocument'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UploadDocument'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadDocument'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadDocument'
+          description: ''
+  /auth/api/v1/verify-otp/:
+    post:
+      operationId: auth_api_v1_verify_otp_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtp'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyOtp'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyOtp'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+          description: ''
+  /booking/api/v1/guest/booking/:
+    get:
+      operationId: booking_api_v1_guest_booking_list
+      tags:
+      - booking
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookingList'
+          description: ''
+    post:
+      operationId: booking_api_v1_guest_booking_create
+      tags:
+      - booking
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBooking'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateBooking'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateBooking'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBooking'
+          description: ''
+  /booking/api/v1/guest/booking/{id}/:
+    get:
+      operationId: booking_api_v1_guest_booking_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - booking
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingDetails'
+          description: ''
+  /booking/api/v1/guest/booking/calculate-price/:
+    get:
+      operationId: booking_api_v1_guest_booking_calculate_price_retrieve
+      parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+        description: YYYY-MM-DD
+        required: true
+      - in: query
+        name: price_type
+        schema:
+          type: string
+        description: daily or monthly
+        required: true
+      - in: query
+        name: property_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: selected_addon_ids
+        schema:
+          type: string
+        description: Comma separated IDs of addons
+      - in: query
+        name: start_date
+        schema:
+          type: string
+        description: YYYY-MM-DD
+        required: true
+      tags:
+      - booking
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /booking/api/v1/guest/booking/cancel/{booking_id}/:
+    patch:
+      operationId: booking_api_v1_guest_booking_cancel_partial_update
+      parameters:
+      - in: path
+        name: booking_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - booking
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /booking/api/v1/owner/booking/:
+    get:
+      operationId: booking_api_v1_owner_booking_list
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+      tags:
+      - booking
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MyBookingList'
+          description: ''
+  /booking/api/v1/owner/booking/{id}/:
+    get:
+      operationId: booking_api_v1_owner_booking_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - booking
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingDetails'
+          description: ''
+  /notify/api/v1/guest/notify/:
+    get:
+      operationId: notify_api_v1_guest_notify_list
+      tags:
+      - notify
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: ''
+  /notify/api/v1/guest/notify/add-device/:
+    post:
+      operationId: notify_api_v1_guest_notify_add_device_create
+      tags:
+      - notify
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceToken'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceToken'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceToken'
+          description: ''
+  /notify/api/v1/owner/notify/:
+    get:
+      operationId: notify_api_v1_owner_notify_list
+      tags:
+      - notify
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: ''
+  /notify/api/v1/owner/notify/add-device/:
+    post:
+      operationId: notify_api_v1_owner_notify_add_device_create
+      tags:
+      - notify
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceToken'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceToken'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceToken'
+          description: ''
+  /property/api/v1/guest/favourite/:
+    get:
+      operationId: property_api_v1_guest_favourite_retrieve
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyList'
+          description: ''
+    post:
+      operationId: property_api_v1_guest_favourite_create
+      tags:
+      - property
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyList'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PropertyList'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PropertyList'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyList'
+          description: ''
+  /property/api/v1/guest/favourite/{property_id}/:
+    get:
+      operationId: property_api_v1_guest_favourite_retrieve_2
+      parameters:
+      - in: path
+        name: property_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyList'
+          description: ''
+    post:
+      operationId: property_api_v1_guest_favourite_create_2
+      parameters:
+      - in: path
+        name: property_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - property
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyList'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PropertyList'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PropertyList'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyList'
+          description: ''
+  /property/api/v1/guest/property/:
+    get:
+      operationId: property_api_v1_guest_property_list
+      parameters:
+      - in: query
+        name: bath
+        schema:
+          type: integer
+      - in: query
+        name: bed
+        schema:
+          type: integer
+      - in: query
+        name: end_date
+        schema:
+          type: string
+      - in: query
+        name: sea_view
+        schema:
+          type: boolean
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: start_date
+        schema:
+          type: string
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Property type (ANY, HOUSE, etc.)
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyList'
+          description: ''
+  /property/api/v1/guest/property/{id}/:
+    get:
+      operationId: property_api_v1_guest_property_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyList'
+          description: ''
+  /property/api/v1/owner/create-property/:
+    post:
+      operationId: property_api_v1_owner_create_property_create
+      tags:
+      - property
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Property'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Property'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Property'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /property/api/v1/owner/property/:
+    get:
+      operationId: property_api_v1_owner_property_list
+      parameters:
+      - in: query
+        name: bath
+        schema:
+          type: integer
+      - in: query
+        name: bed
+        schema:
+          type: integer
+      - in: query
+        name: end_date
+        schema:
+          type: string
+      - in: query
+        name: sea_view
+        schema:
+          type: boolean
+      - in: query
+        name: search
+        schema:
+          type: string
+      - in: query
+        name: start_date
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: type
+        schema:
+          type: string
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyList'
+          description: ''
+  /property/api/v1/owner/property/{id}/:
+    get:
+      operationId: property_api_v1_owner_property_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyDetail'
+          description: ''
+    delete:
+      operationId: property_api_v1_owner_property_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /property/api/v1/owner/update-gallery/{media_id}/:
+    patch:
+      operationId: property_api_v1_owner_update_gallery_partial_update
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - property
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGallery'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGallery'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: property_api_v1_owner_update_gallery_destroy
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - property
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /property/api/v1/owner/update-property/{property_id}/:
+    patch:
+      operationId: property_api_v1_owner_update_property_partial_update
+      parameters:
+      - in: path
+        name: property_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - property
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProperty'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProperty'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProperty'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    AddOnsPrice:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        service:
+          type: string
+          maxLength: 255
+        price:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+      required:
+      - id
+      - service
+    BookingDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        property:
+          $ref: '#/components/schemas/PropertyList'
+        owner:
+          $ref: '#/components/schemas/UserData'
+        name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          maxLength: 100
+        guest_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        check_in:
+          type: string
+          format: date
+        check_out:
+          type: string
+          format: date
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        status:
+          $ref: '#/components/schemas/Status836Enum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - check_in
+      - check_out
+      - created_at
+      - email
+      - guest_count
+      - id
+      - name
+      - owner
+      - phone
+      - price
+      - property
+      - updated_at
+    BookingList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        property:
+          $ref: '#/components/schemas/PropertyList'
+        name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          maxLength: 100
+        guest_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        check_in:
+          type: string
+          format: date
+        check_out:
+          type: string
+          format: date
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        status:
+          $ref: '#/components/schemas/Status836Enum'
+      required:
+      - check_in
+      - check_out
+      - email
+      - guest_count
+      - id
+      - name
+      - phone
+      - price
+      - property
+    CreateBooking:
+      type: object
+      properties:
+        property:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          maxLength: 100
+        check_in:
+          type: string
+          format: date
+        check_out:
+          type: string
+          format: date
+        guest_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - check_in
+      - check_out
+      - email
+      - guest_count
+      - name
+      - phone
+      - property
+    CreateUser:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          title: User Email
+          maxLength: 255
+        password:
+          type: string
+          writeOnly: true
+          maxLength: 128
+        phone:
+          type: string
+          nullable: true
+          title: Phone Number
+          maxLength: 20
+        name:
+          type: string
+          nullable: true
+          title: User Name
+          maxLength: 200
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          title: User Role
+      required:
+      - email
+      - password
+    DeviceToken:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 255
+      required:
+      - token
+    DocumentTypeEnum:
+      enum:
+      - NID
+      - PASSPORT
+      - BANK_STATEMENT
+      type: string
+      description: |-
+        * `NID` - National ID
+        * `PASSPORT` - Passport
+        * `BANK_STATEMENT` - Bank Statement
+    Gallery:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/GalleryTypeEnum'
+        file:
+          type: string
+          format: uri
+      required:
+      - file
+      - id
+    GalleryTypeEnum:
+      enum:
+      - IMAGE
+      - VIDEO
+      type: string
+      description: |-
+        * `IMAGE` - Image
+        * `VIDEO` - Video
+    GetOtp:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    LoginUser:
+      type: object
+      properties:
+        password:
+          type: string
+          writeOnly: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+      required:
+      - password
+    MyBookingList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/Status836Enum'
+        name:
+          type: string
+        address:
+          type: string
+        cover:
+          type: string
+          readOnly: true
+      required:
+      - address
+      - cover
+      - id
+      - name
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        body:
+          type: string
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - created_at
+      - id
+      - title
+    OtherCharges:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - id
+      - name
+    PatchedGallery:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/GalleryTypeEnum'
+        file:
+          type: string
+          format: uri
+    PatchedProperty:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        about:
+          type: string
+          nullable: true
+        address:
+          type: string
+          maxLength: 255
+        bathroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        bedroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        area:
+          type: string
+          nullable: true
+          maxLength: 255
+        cover:
+          type: string
+          format: uri
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+          nullable: true
+        price_daily:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        price_monthly:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        discount:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        hosted_by:
+          type: string
+          nullable: true
+          maxLength: 255
+        whatsapp:
+          type: string
+          nullable: true
+          maxLength: 15
+        views:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        sea_view:
+          type: boolean
+        type:
+          $ref: '#/components/schemas/Type36cEnum'
+        weekend_dates:
+          $ref: '#/components/schemas/Weekend'
+        vacations:
+          $ref: '#/components/schemas/Vacetions'
+        other_charges:
+          type: array
+          items:
+            $ref: '#/components/schemas/OtherCharges'
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/Gallery'
+        add_ons_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddOnsPrice'
+    PatchedUpdateUser:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        old_password:
+          type: string
+          writeOnly: true
+        new_password:
+          type: string
+          writeOnly: true
+        image:
+          type: string
+          format: uri
+    Property:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        about:
+          type: string
+          nullable: true
+        address:
+          type: string
+          maxLength: 255
+        bathroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        bedroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        area:
+          type: string
+          nullable: true
+          maxLength: 255
+        cover:
+          type: string
+          format: uri
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+          nullable: true
+        price_daily:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        price_monthly:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        discount:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        hosted_by:
+          type: string
+          nullable: true
+          maxLength: 255
+        whatsapp:
+          type: string
+          nullable: true
+          maxLength: 15
+        views:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        sea_view:
+          type: boolean
+        type:
+          $ref: '#/components/schemas/Type36cEnum'
+        weekend_dates:
+          $ref: '#/components/schemas/Weekend'
+        vacations:
+          $ref: '#/components/schemas/Vacetions'
+        other_charges:
+          type: array
+          items:
+            $ref: '#/components/schemas/OtherCharges'
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/Gallery'
+        add_ons_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddOnsPrice'
+      required:
+      - address
+      - id
+      - name
+    PropertyDetail:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        about:
+          type: string
+          nullable: true
+        price:
+          type: number
+          format: double
+        owner:
+          $ref: '#/components/schemas/PropertyOwner'
+        bathroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        bedroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        size:
+          type: string
+        type:
+          $ref: '#/components/schemas/Type36cEnum'
+        status:
+          $ref: '#/components/schemas/PropertyDetailStatusEnum'
+        verified:
+          type: boolean
+        sea_view:
+          type: boolean
+        review_count:
+          type: string
+          readOnly: true
+        cover:
+          type: string
+          readOnly: true
+        average_rating:
+          type: string
+          readOnly: true
+        address:
+          type: string
+          maxLength: 255
+        latitude:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+          nullable: true
+        weekend_dates:
+          allOf:
+          - $ref: '#/components/schemas/Weekend'
+          readOnly: true
+        vacations:
+          allOf:
+          - $ref: '#/components/schemas/Vacetions'
+          readOnly: true
+        other_charges:
+          type: array
+          items:
+            $ref: '#/components/schemas/OtherCharges'
+          readOnly: true
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/Gallery'
+          readOnly: true
+        add_ons_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddOnsPrice'
+          readOnly: true
+        reviews:
+          type: string
+          readOnly: true
+        views:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        favourite:
+          type: boolean
+          readOnly: true
+        discount:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - add_ons_prices
+      - address
+      - average_rating
+      - cover
+      - favourite
+      - gallery
+      - name
+      - other_charges
+      - owner
+      - review_count
+      - reviews
+      - size
+      - vacations
+      - weekend_dates
+    PropertyDetailStatusEnum:
+      enum:
+      - AVAILABLE
+      - BOOKED
+      - CLOSED
+      type: string
+      description: |-
+        * `AVAILABLE` - Available
+        * `BOOKED` - Booked
+        * `CLOSED` - Closed
+    PropertyList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        price:
+          type: number
+          format: double
+        bathroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        bedroom:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        size:
+          type: string
+        type:
+          $ref: '#/components/schemas/Type36cEnum'
+        sea_view:
+          type: boolean
+        cover:
+          type: string
+          readOnly: true
+        average_rating:
+          type: string
+          readOnly: true
+        address:
+          type: string
+          maxLength: 255
+        views:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        favourite:
+          type: boolean
+          readOnly: true
+        discount:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - address
+      - average_rating
+      - cover
+      - favourite
+      - id
+      - name
+      - size
+    PropertyOwner:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          title: User Name
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          title: User Email
+          maxLength: 255
+        image:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - image
+    ResetPassword:
+      type: object
+      properties:
+        new_password:
+          type: string
+          writeOnly: true
+      required:
+      - new_password
+    RoleEnum:
+      enum:
+      - guest
+      - owner
+      - admin
+      type: string
+      description: |-
+        * `guest` - Guest
+        * `owner` - Owner
+        * `admin` - Admin
+    Status836Enum:
+      enum:
+      - PENDING
+      - CONFIRMED
+      - CHECKED_IN
+      - CHECKED_OUT
+      - CANCELLED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `CONFIRMED` - Confirmed
+        * `CHECKED_IN` - Checked In
+        * `CHECKED_OUT` - Checked Out
+        * `CANCELLED` - Cancelled
+    TokenObtainPair:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - email
+      - password
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          writeOnly: true
+      required:
+      - access
+      - refresh
+    Type36cEnum:
+      enum:
+      - HOUSE
+      - VILLA
+      - APARTMENT
+      - COMMERCIAL
+      type: string
+      description: |-
+        * `HOUSE` - House
+        * `VILLA` - Villa
+        * `APARTMENT` - Apartment
+        * `COMMERCIAL` - Commercial
+    UploadDocument:
+      type: object
+      properties:
+        document_type:
+          $ref: '#/components/schemas/DocumentTypeEnum'
+        document_file:
+          type: string
+          format: uri
+      required:
+      - document_file
+    UserData:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          title: User Email
+          maxLength: 255
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          title: User Role
+        name:
+          type: string
+          nullable: true
+          title: User Name
+          maxLength: 200
+        phone:
+          type: string
+          nullable: true
+          title: Phone Number
+          maxLength: 20
+        image:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - image
+    Vacetions:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        month: {}
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - id
+    VerifyOtp:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+          maxLength: 10
+      required:
+      - email
+      - otp
+    Weekend:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        weekend: {}
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - id
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

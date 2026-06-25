@@ -1,32 +1,32 @@
-from django.urls import path
-from django_bolt import BoltAPI
+from django.urls import path, include
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.property.api import CreatePropertyDRF, UpdatePropertyDRF
-from apps.auth.api import api as auth_router
-from apps.booking.api import api_guest as guest_booking_router
-from apps.booking.api import api_owner as owner_booking_router
-from apps.property.api import guest_api as guest_property_router
-from apps.property.api import owner_api as owner_property_router
-from apps.notify.api import owner_api as owner_notify_router
-from apps.notify.api import guest_api as guest_notify_router
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/owner/property/create/', CreatePropertyDRF.as_view(), name="create-property"),
-    path('api/v1/owner/property/update/<uuid:property_id>/', UpdatePropertyDRF.as_view(), name="update-property"),
+    # Swagger
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    # JWT Auth
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Auth App
+    path('auth/api/v1/', include('apps.auth.urls')),
+    
+    # Booking App
+    path('booking/api/v1/', include('apps.booking.urls')),
+    
+    # Property App
+    path('property/api/v1/', include('apps.property.urls')),
+    
+    # Notify App
+    path('notify/api/v1/', include('apps.notify.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-api = BoltAPI()
-api.include_router(auth_router)
-api.include_router(guest_booking_router)
-api.include_router(owner_booking_router)
-api.include_router(guest_property_router)
-api.include_router(owner_property_router)
-api.include_router(owner_notify_router)
-api.include_router(guest_notify_router)
-api.mount_django("/")
 

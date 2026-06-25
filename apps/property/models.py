@@ -44,6 +44,7 @@ class Property(models.Model):
     views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    discount = models.IntegerField(default=0)
 
     @property
     def price(self):
@@ -57,13 +58,62 @@ class Property(models.Model):
         return self.name
 
 
-class AdvantgePrice(models.Model):
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='advantge_prices')
-    service = models.CharField(max_length=255)
-    price = models.IntegerField(null=True, blank=True)
+class Weekend(models.Model):
+    WEEKEND = [
+        ('SAT', 'Saturday'),
+        ('SUN', 'Sunday'),
+        ('MON', 'Monday'),
+        ('TUE', 'Tuesday'),
+        ('WED', 'Wednesday'),
+        ('THU', 'Thursday'),
+        ('FRI', 'Friday'),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='weekend_dates')
+    weekend = models.JSONField(blank=True, default=list, choices=WEEKEND)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.property.name + " - " + self.service + " : " + str(self.price)
+        return self.property.name + " - " + str(self.weekend)
+
+
+
+class Vacetions(models.Model):
+    MONTHS = [
+        ('JAN', 'January'),
+        ('FEB', 'February'),
+        ('MAR', 'March'),
+        ('APR', 'April'),
+        ('MAY', 'May'),
+        ('JUN', 'June'),
+        ('JUL', 'July'),
+        ('AUG', 'August'),
+        ('SEP', 'September'),
+        ('OCT', 'October'),
+        ('NOV', 'November'),
+        ('DEC', 'December'),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='vacations')
+    month = models.JSONField(blank=True, default=list, choices=MONTHS)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.property.name + " - " + str(self.month)
+
+
+
+class OtherCharges(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='other_charges')
+    name = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.property.name + " - " + self.name + " : " + str(self.price)
 
 
 
@@ -74,26 +124,6 @@ class AddOnsPrice(models.Model):
 
     def __str__(self):
         return self.property.name + " - " + self.service + " : " + str(self.price)
-
-
-
-class SeasonalPrice(models.Model):
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='season_prices')
-    start = models.DateField()
-    end = models.DateField()
-    price = models.IntegerField(null=True, blank=True)
-
-    def __str__(self):
-        return self.property.name + " - " + str(self.start) + " : " + str(self.end) + " : " + str(self.price)
-
-
-
-class Amenity(models.Model):
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='amenities')
-    name = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.name
 
 
 
@@ -108,8 +138,9 @@ class Gallery(models.Model):
 
     def __str__(self):
         return f"{self.property.name} - {self.type}"
-    
-    
+
+
+
 
 class Review(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='reviews')

@@ -11,11 +11,6 @@ class PropertyAdmin(ModelAdmin):
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
 
-@admin.register(Amenity)
-class AmenityAdmin(ModelAdmin):
-    list_display = ('name', 'property')
-    list_filter = ('property',)
-    search_fields = ('name',)
 
 @admin.register(Gallery)
 class GalleryAdmin(ModelAdmin):
@@ -31,3 +26,10 @@ class ReviewAdmin(ModelAdmin):
     search_fields = ('user', 'property', 'review')
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
+
+
+
+admin.site.register(AddOnsPrice,ModelAdmin)
+admin.site.register(Weekend,ModelAdmin)
+admin.site.register(Vacetions,ModelAdmin)
+admin.site.register(OtherCharges,ModelAdmin)

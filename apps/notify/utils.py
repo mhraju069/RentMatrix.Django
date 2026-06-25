@@ -38,9 +38,9 @@ def checkin_reminder():
 
 
 
-async def booking_reminder(user, booking):
+def booking_reminder(user, booking):
     try:
-        config, _ = await NotifySettings.objects.aget_or_create(user=user)
+        config, _ = NotifySettings.objects.get_or_create(user=user)
         
         if not config or not config.booking:
             return
@@ -49,20 +49,17 @@ async def booking_reminder(user, booking):
         body = f"You have received a new booking for {booking.property.name} from {booking.name}."
         
         # Save notification to database
-        await Notification.objects.acreate(
+        Notification.objects.create(
             user=user,
             title=title,
             body=body
         )
         
         # Fetch owner's device tokens
-        tokens = [token.token async for token in DeviceToken.objects.filter(user=user)]
-        
-        from asgiref.sync import sync_to_async
-        async_send = sync_to_async(send_notification)
+        tokens = [token.token for token in DeviceToken.objects.filter(user=user)]
         
         for token in tokens:
-            await async_send(token, title, body)
+            send_notification(token, title, body)
 
     except Exception as e:
         print(f"Error sending booking reminder: {e}")
