@@ -168,3 +168,25 @@ class Favourites(models.Model):
     class Meta:
         unique_together = ('user', 'property')
         verbose_name_plural = "Favourites"
+
+
+
+class Reports(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    reason = models.CharField(max_length=255)
+    description = models.TextField()
+    response = models.TextField(null=True, blank=True)
+    is_resolved = models.BooleanField(default=False)
+    resolve_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Report for {self.property.name} by {self.user.username}"
+
+    class Meta:
+        verbose_name_plural = "Reports"
+
+    

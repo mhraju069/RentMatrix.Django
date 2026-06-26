@@ -3,7 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
 from rest_framework import status
 import json
-from apps.property.models import Property, Amenity, Gallery, AdvantgePrice, AddOnsPrice, SeasonalPrice
+from apps.property.models import Property, Gallery, AddOnsPrice, Reports
 
 User = get_user_model()
 
@@ -15,9 +15,7 @@ class PropertyDRFTests(APITestCase):
         self.client.force_authenticate(user=self.user)
 
     def test_create_property_drf(self):
-        # A valid 1x1 pixel transparent GIF image
         gif_bytes = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
-        
         cover_file = SimpleUploadedFile("cover.gif", gif_bytes, content_type="image/gif")
         gallery_file = SimpleUploadedFile("gallery1.gif", gif_bytes, content_type="image/gif")
 
@@ -38,26 +36,26 @@ class PropertyDRFTests(APITestCase):
             "longitude": 91.98,
             "cover": cover_file,
             "gallery_files": [gallery_file],
-            "amenities": json.dumps([
-                {"name": "WiFi"},
-                {"name": "Swimming Pool"}
-            ]),
             "gallery": json.dumps([
                 {"type": "IMAGE"}
-            ]),
-            "advantage_prices": json.dumps([
-                {"service": "Airport Pickup", "price": 25}
             ]),
             "add_ons_prices": json.dumps([
                 {"service": "Extra Bed", "price": 15}
             ]),
-            "season_prices": json.dumps([
-                {"start": "2026-06-01", "end": "2026-08-31", "price": 180}
+            "weekend_dates": json.dumps({
+                "weekend": ["FRI", "SAT"],
+                "price": 180
+            }),
+            "vacations": json.dumps({
+                "month": ["JUN", "JUL"],
+                "price": 200
+            }),
+            "other_charges": json.dumps([
+                {"name": "Cleaning Fee", "price": 50}
             ])
         }
 
-        # The view is routed at /api/v1/owner/property/create/ in config/api.py
-        response = self.client.post("/api/v1/owner/property/create/", data, format="multipart")
+        response = self.client.post("/property/api/v1/owner/create-property/", data, format="multipart")
         print("RESPONSE STATUS:", response.status_code)
         print("RESPONSE DATA:", response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -67,14 +65,13 @@ class PropertyDRFTests(APITestCase):
         property_obj = Property.objects.filter(name="Luxury Oceanfront Condo").first()
         self.assertIsNotNone(property_obj)
         self.assertEqual(property_obj.owner, self.user)
-        self.assertEqual(property_obj.amenities.count(), 2)
         self.assertEqual(property_obj.galleries.count(), 1)
-        self.assertEqual(property_obj.advantge_prices.count(), 1)
         self.assertEqual(property_obj.add_ons_prices.count(), 1)
-        self.assertEqual(property_obj.season_prices.count(), 1)
+        self.assertIsNotNone(property_obj.weekend_dates)
+        self.assertIsNotNone(property_obj.vacations)
+        self.assertEqual(property_obj.other_charges.count(), 1)
 
     def test_update_property_drf(self):
-        # Create an initial property
         property_obj = Property.objects.create(
             owner=self.user,
             name="Initial Name",
@@ -83,23 +80,17 @@ class PropertyDRFTests(APITestCase):
             bathroom=1,
             price_daily=100.00
         )
-        Amenity.objects.create(property=property_obj, name="Initial Amenity")
 
-        # Prepare update data (partial update: only name, price_daily, amenities, and advantage_prices)
         data = {
             "name": "Updated Name",
             "price_daily": 120.00,
-            "amenities": json.dumps([
-                {"name": "Updated Amenity 1"},
-                {"name": "Updated Amenity 2"}
-            ]),
-            "advantage_prices": json.dumps([
+            "add_ons_prices": json.dumps([
                 {"service": "Laundry", "price": 10}
             ])
         }
 
-        url = f"/api/v1/owner/property/update/{property_obj.id}/"
-        response = self.client.post(url, data, format="multipart")
+        url = f"/property/api/v1/owner/update-property/{property_obj.id}/"
+        response = self.client.patch(url, data, format="multipart")
         print("UPDATE RESPONSE STATUS:", response.status_code)
         print("UPDATE RESPONSE DATA:", response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -109,10 +100,37 @@ class PropertyDRFTests(APITestCase):
         property_obj.refresh_from_db()
         self.assertEqual(property_obj.name, "Updated Name")
         self.assertEqual(float(property_obj.price_daily), 120.00)
-        # Verify amenities were replaced
-        self.assertEqual(property_obj.amenities.count(), 2)
-        self.assertTrue(property_obj.amenities.filter(name="Updated Amenity 1").exists())
-        self.assertFalse(property_obj.amenities.filter(name="Initial Amenity").exists())
-        # Verify advantage prices were created
-        self.assertEqual(property_obj.advantge_prices.count(), 1)
-        self.assertEqual(property_obj.advantge_prices.first().service, "Laundry")
+        self.assertEqual(property_obj.add_ons_prices.count(), 1)
+        self.assertEqual(property_obj.add_ons_prices.first().service, "Laundry")
+
+    def test_report_property(self):
+        # Create a property to report
+        property_obj = Property.objects.create(
+            owner=self.user,
+            name="Test Property to Report",
+            address="Some Address",
+            bedroom=1,
+            bathroom=1,
+            price_daily=100.00
+        )
+
+        # 1. Test POST report
+        data = {
+            "property": str(property_obj.id),
+            "reason": "Spam listing",
+            "description": "This listing is duplicate and fake."
+        }
+        response = self.client.post("/property/api/v1/guest/report/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+
+        # Verify DB
+        report = Reports.objects.filter(property=property_obj, user=self.user).first()
+        self.assertIsNotNone(report)
+        self.assertEqual(report.reason, "Spam listing")
+
+        # 2. Test GET reports
+        response = self.client.get("/property/api/v1/guest/report/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["reason"], "Spam listing")

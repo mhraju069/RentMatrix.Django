@@ -7,6 +7,7 @@ urlpatterns = [
     path('guest/property/<uuid:pk>/', PropertyGuestViewSet.as_view({'get': 'retrieve'}), name='guest-property-detail'),
     path('guest/favourite/', FavouritePropertyView.as_view(), name='favourite-list'),
     path('guest/favourite/<uuid:property_id>/', FavouritePropertyView.as_view(), name='favourite-action'),
+    path('guest/report/', ReportPropertyView.as_view(), name='report-property'),
     
     # Owner Endpoints
     path('owner/property/', PropertyOwnerViewSet.as_view({'get': 'list'}), name='owner-property-list'),

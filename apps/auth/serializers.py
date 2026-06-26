@@ -9,7 +9,8 @@ class UserDataSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'role', 'name', 'phone', 'image']
+        fields = ['id', 'email', 'role', 'name', 'phone', 'image']
+        read_only_fields = ('id',)
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_image(self, obj):
@@ -20,7 +21,8 @@ class UserDataSerializer(serializers.ModelSerializer):
 class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email', 'password', 'phone', 'name', 'role']
+        fields = ['id', 'email', 'password', 'phone', 'name', 'role']
+        read_only_fields = ('id',)
         extra_kwargs = {
             'password': {'write_only': True}
         }

@@ -9,9 +9,10 @@ from django.conf import settings
 from .models import *
 import uuid
 
+from apps.auth.utils import format_serializer_errors
 from .models import Property, Favourites
 from .serializers import (
-    PropertyDetailSerializer, PropertyListSerializer, PropertySerializer, GallerySerializer
+    PropertyDetailSerializer, PropertyListSerializer, PropertySerializer, GallerySerializer, ReportsSerializer
 )   
 from apps.booking.models import Booking
 
@@ -373,7 +374,7 @@ class CreatePropertyDRF(BasePropertyMutationView):
         if serializer.is_valid():
             serializer.save()
             return Response({"status": 200, "success": True, "message": "Property created successfully"})
-        return Response({"status": 400, "success": False, "message": "Invalid data", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "message": "Invalid data", "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UpdatePropertyDRF(BasePropertyMutationView):
@@ -444,7 +445,7 @@ class UpdatePropertyDRF(BasePropertyMutationView):
         if serializer.is_valid():
             serializer.save()
             return Response({"status": 200, "success": True, "message": "Property updated successfully"})
-        return Response({"status": 400, "success": False, "message": "Invalid data", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "message": "Invalid data", "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -462,3 +463,24 @@ class UpdateGallery(views.APIView):
     def patch(self, request, media_id):
         Gallery.objects.filter(id=media_id).update(file=request.FILES.get("file"))
         return Response({"status": 200, "success": True, "message": "Gallery updated successfully"})
+
+
+
+
+
+class ReportPropertyView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        reports = Reports.objects.filter(user=request.user)
+        serializer = ReportsSerializer(reports, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(request=ReportsSerializer, responses={200: dict})
+    def post(self, request):
+        serializer = ReportsSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response({"status": 200, "success": True, "message": "Report submitted successfully"})
+        return Response({"status": 400, "success": False, "message": "Invalid data", "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)

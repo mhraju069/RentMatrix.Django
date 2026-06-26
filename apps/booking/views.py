@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from .utils import get_final_discount_price_for_booking
+from apps.auth.utils import format_serializer_errors
 
 from .models import Booking
 from apps.property.models import Property
@@ -201,7 +202,7 @@ class GuestBookingViewSet(viewsets.ModelViewSet):
                 "status": 200, "success": True, "message": "Booking created successfully",
                 "data": booking_serializer.data
             })
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 
     def list(self, request, *args, **kwargs):

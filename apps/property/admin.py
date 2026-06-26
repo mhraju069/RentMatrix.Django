@@ -33,3 +33,11 @@ admin.site.register(AddOnsPrice,ModelAdmin)
 admin.site.register(Weekend,ModelAdmin)
 admin.site.register(Vacetions,ModelAdmin)
 admin.site.register(OtherCharges,ModelAdmin)
+
+@admin.register(Reports)
+class ReportsAdmin(ModelAdmin):
+    list_display = ('user', 'property', 'reason', 'description', 'response', 'is_resolved', 'resolve_date', 'created_at')
+    list_filter = ('user', 'property', 'is_resolved', 'resolve_date')
+    search_fields = ('user', 'property', 'reason', 'description')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')

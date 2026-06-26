@@ -247,7 +247,15 @@ class PropertySerializer(serializers.ModelSerializer):
                 OtherCharges.objects.create(property=instance, **charge)
 
         return instance
-        
+
+
+
+class ReportsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reports
+        fields = ["id", "property", "user", "reason", "description", "response", "is_resolved", "resolve_date", "created_at"]
+        read_only_fields = ["id", "created_at", "is_resolved", "resolve_date", "response", "user"]
+    
         
 
     

@@ -6,13 +6,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import User, OTP, Document
-from .utils import send_otp
+from .utils import send_otp, format_serializer_errors
 from .serializers import (
     CreateUserSerializer, LoginUserSerializer, GetOtpSerializer, VerifyOtpSerializer,
     UpdateUserSerializer, ResetPasswordSerializer, UploadDocumentSerializer, UserDataSerializer
 )
-import random
-import string
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -26,7 +24,7 @@ class SignupView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
 
-    @extend_schema(request=CreateUserSerializer, responses={201: UserDataSerializer})
+    @extend_schema(request=CreateUserSerializer)
     def post(self, request):
         serializer = CreateUserSerializer(data=request.data)
         if serializer.is_valid():
@@ -38,15 +36,13 @@ class SignupView(APIView):
             user = serializer.save()
             user.set_password(serializer.validated_data['password'])
             user.save()
-            
-            tokens = get_tokens_for_user(user)
-            user_data = UserDataSerializer(user).data
+
+            send_otp(user, "signup")
             
             return Response({
                 "status": 201, "success": True, "message": "User created successfully",
-                "user": user_data, **tokens
             }, status=status.HTTP_201_CREATED)
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -78,7 +74,7 @@ class LoginView(APIView):
                 "status": 200, "success": True, "message": "User logged in successfully",
                 "user": user_data, **tokens
             }, status=status.HTTP_200_OK)
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -119,7 +115,8 @@ class MeUpdateView(APIView):
             user.save()
             user_data = UserDataSerializer(user).data
             return Response({"status": 200, "success": True, "message": "User updated successfully", "user": user_data})
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class GetOtpView(APIView):
     permission_classes = [AllowAny]
@@ -135,13 +132,12 @@ class GetOtpView(APIView):
             if not user:
                 return Response({"status": 404, "success": False, "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             
-            OTP.objects.filter(user=user).delete()
-            otp_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
-            OTP.objects.create(user=user, otp=otp_code)
-            
-            success_status, res, msg = send_otp(user.email, otp_code, "Login")
-            return Response({"status": success_status, "success": res, "message": msg})
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            res = send_otp(user)
+            if res:
+                return Response({"status": 200, "success": True, "message": "Otp sent successfully"})
+            else:
+                return Response({"status": 500, "success": False, "message": "Otp not sent"})
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyOtpView(APIView):
     permission_classes = [AllowAny]
@@ -175,15 +171,13 @@ class VerifyOtpView(APIView):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-                
-            tokens = get_tokens_for_user(user)
-            user_data = UserDataSerializer(user).data
             
             return Response({
                 "status": 200, "success": True, "message": "Otp verified successfully",
-                "user": user_data, **tokens
             }, status=status.HTTP_200_OK)
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 class ResetPasswordView(APIView):
     permission_classes = [IsAuthenticated]
@@ -203,7 +197,7 @@ class ResetPasswordView(APIView):
                 "status": 200, "success": True, "message": "Password reset successfully",
                 "user": user_data, **tokens
             }, status=status.HTTP_200_OK)
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
 
 class UploadDocumentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -219,4 +213,4 @@ class UploadDocumentView(APIView):
                 document_file=request.FILES.get('document_file') or request.FILES.get('file')
             )
             return Response({"status": 200, "success": True, "message": "Document uploaded successfully"}, status=status.HTTP_200_OK)
-        return Response({"status": 400, "success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
