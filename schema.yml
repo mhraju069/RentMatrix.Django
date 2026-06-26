@@ -275,13 +275,13 @@ paths:
       - booking
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/CreateBooking'
           application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/CreateBooking'
-          multipart/form-data:
+          application/json:
             schema:
               $ref: '#/components/schemas/CreateBooking'
         required: true
@@ -1011,6 +1011,28 @@ components:
           maximum: 9223372036854775807
           minimum: -9223372036854775808
           format: int64
+        price_type:
+          allOf:
+          - $ref: '#/components/schemas/PriceTypeEnum'
+          writeOnly: true
+          default: daily
+        selected_addon_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          writeOnly: true
+        document_file:
+          type: array
+          items:
+            type: string
+            format: uri
+          writeOnly: true
+        document_type:
+          type: array
+          items:
+            type: string
+          writeOnly: true
       required:
       - check_in
       - check_out
@@ -1056,16 +1078,6 @@ components:
           maxLength: 255
       required:
       - token
-    DocumentTypeEnum:
-      enum:
-      - NID
-      - PASSPORT
-      - BANK_STATEMENT
-      type: string
-      description: |-
-        * `NID` - National ID
-        * `PASSPORT` - Passport
-        * `BANK_STATEMENT` - Bank Statement
     Gallery:
       type: object
       properties:
@@ -1295,6 +1307,14 @@ components:
         image:
           type: string
           format: uri
+    PriceTypeEnum:
+      enum:
+      - daily
+      - monthly
+      type: string
+      description: |-
+        * `daily` - daily
+        * `monthly` - monthly
     Property:
       type: object
       properties:
@@ -1679,12 +1699,14 @@ components:
       type: object
       properties:
         document_type:
-          $ref: '#/components/schemas/DocumentTypeEnum'
+          type: string
+          maxLength: 20
         document_file:
           type: string
           format: uri
       required:
       - document_file
+      - document_type
     UserData:
       type: object
       properties:

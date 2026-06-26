@@ -101,8 +101,11 @@ class CalculateBookingPriceView(views.APIView):
 
 
 
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 class GuestBookingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user).select_related('property').annotate(
@@ -127,10 +130,65 @@ class GuestBookingViewSet(viewsets.ModelViewSet):
             if not prop:
                 return Response({"status": 404, "success": False, "message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
                 
+            price_type = request.data.get('price_type', 'daily')
+            addons_str = request.data.get('selected_addon_ids')
+            if isinstance(addons_str, str):
+                selected_addon_ids = [aid.strip() for aid in addons_str.split(",")] if addons_str else []
+            elif isinstance(addons_str, list):
+                selected_addon_ids = addons_str
+            else:
+                selected_addon_ids = []
+                
+            check_in = request.data.get('check_in')
+            check_out = request.data.get('check_out')
+            
+            try:
+                breakdown = get_final_discount_price_for_booking(
+                    property_obj_or_id=prop,
+                    price_type=price_type,
+                    selected_addon_ids=selected_addon_ids,
+                    start_date=check_in,
+                    end_date=check_out
+                )
+                unit_price = breakdown["final_unit_price"]
+                
+                total_duration = 1
+                if check_in and check_out:
+                    s_date = datetime.datetime.strptime(check_in, "%Y-%m-%d").date()
+                    e_date = datetime.datetime.strptime(check_out, "%Y-%m-%d").date()
+                    if price_type == 'daily':
+                        delta = (e_date - s_date).days
+                        if delta > 0: total_duration = delta
+                    elif price_type == 'monthly':
+                        months = (e_date.year - s_date.year) * 12 + e_date.month - s_date.month
+                        if months > 0: total_duration = months
+                        
+                final_price = unit_price * total_duration
+            except Exception as e:
+                print(f"Error calculating final price: {e}")
+                final_price = prop.price or 0.0
+                
             booking = serializer.save(
                 user=request.user,
-                price=prop.price or 0.0
+                price=final_price
             )
+            
+            # --- Save Documents ---
+            doc_files = request.FILES.getlist('document_file')
+            if hasattr(request.data, 'getlist'):
+                doc_types = request.data.getlist('document_type')
+            else:
+                dt = request.data.get('document_type')
+                doc_types = [dt] if dt else []
+                
+            for i, f in enumerate(doc_files):
+                dtype = doc_types[i] if i < len(doc_types) else 'NID'
+                Document.objects.create(
+                    user=request.user,
+                    document_type=dtype,
+                    document_file=f
+                )
+            # ----------------------
             
             try:
                 from apps.notify.utils import booking_reminder
