@@ -26,6 +26,9 @@ urlpatterns = [
     
     # Notify App
     path('notify/api/v1/', include('apps.notify.urls')),
+    
+    # Currency and Language App
+    path('currency-and-language/api/v1/', include('apps.currency_and_language.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

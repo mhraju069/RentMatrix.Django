@@ -53,25 +53,60 @@ class BookingListSerializer(serializers.ModelSerializer):
 class BookingDetailsSerializer(serializers.ModelSerializer):
     property = PropertyListSerializer()
     owner = UserDataSerializer(source='property.owner')
+    documents = serializers.SerializerMethodField()
+    booking_status_tracker = serializers.SerializerMethodField()
+    security_approval_tracker = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = [
             'id', 'property', 'owner', 'name', 'phone', 'email', 'guest_count', 
-            'check_in', 'check_out', 'price', 'status', 'created_at', 'updated_at'
+            'check_in', 'check_out', 'price', 'status', 'created_at', 'updated_at',
+            'documents', 'booking_status_tracker', 'security_approval_tracker'
         ]
 
+    def get_booking_status_tracker(self, obj):
+        return {
+            "request_submitted": True,
+            "host_review": obj.status in ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'],
+            "approved": obj.status in ['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT']
+        }
+
+    def get_security_approval_tracker(self, obj):
+        from apps.auth.models import Document
+        has_docs = Document.objects.filter(user=obj.user).exists()
+        has_verified_docs = Document.objects.filter(user=obj.user, is_verified=True).exists()
+        return {
+            "document_uploaded": has_docs,
+            "security_review": has_docs,
+            "clearance_granted": has_verified_docs
+        }
+
+    def get_documents(self, obj):
+        from apps.auth.models import Document
+        from apps.auth.serializers import UploadDocumentSerializer
+        docs = Document.objects.filter(user=obj.user)
+        return UploadDocumentSerializer(docs, many=True).data
+
 class MyBookingListSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source='property.name')
-    address = serializers.CharField(source='property.address')
+    property_name = serializers.CharField(source='property.name', read_only=True)
+    name = serializers.CharField(source='property.name', read_only=True)
+    address = serializers.CharField(source='property.address', read_only=True)
     cover = serializers.SerializerMethodField()
+    guest_name = serializers.CharField(source='name', read_only=True)
+    guest_phone = serializers.CharField(source='phone', read_only=True)
+    guest_email = serializers.CharField(source='email', read_only=True)
+    user = UserDataSerializer(read_only=True)
 
     class Meta:
         model = Booking
-        fields = ['id', 'status', 'name', 'address', 'cover']
+        fields = [
+            'id', 'status', 'name', 'property_name', 'address', 'cover',
+            'guest_name', 'guest_phone', 'guest_email', 'check_in', 'check_out',
+            'guest_count', 'price', 'user'
+        ]
         
     def get_cover(self, obj):
-        from django.conf import settings
         if obj.property and obj.property.cover_image:
-            return f"{settings.BACKEND_URI}{obj.property.cover_image.url}"
+            return obj.property.cover_image.url
         return ""

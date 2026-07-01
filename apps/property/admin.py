@@ -33,6 +33,8 @@ admin.site.register(AddOnsPrice,ModelAdmin)
 admin.site.register(Weekend,ModelAdmin)
 admin.site.register(Vacetions,ModelAdmin)
 admin.site.register(OtherCharges,ModelAdmin)
+admin.site.register(Activity,ModelAdmin)
+admin.site.register(Amenity,ModelAdmin)
 
 @admin.register(Reports)
 class ReportsAdmin(ModelAdmin):

@@ -126,6 +126,22 @@ class AddOnsPrice(models.Model):
         return self.property.name + " - " + self.service + " : " + str(self.price)
 
 
+class Amenity(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='amenities')
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+
+class Activity(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='activities')
+    name = models.CharField(max_length=255)
+    details = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
 
 class Gallery(models.Model):
     TYPE = [

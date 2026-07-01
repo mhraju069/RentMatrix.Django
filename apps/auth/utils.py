@@ -8,7 +8,7 @@ from .models import User, OTP
 
 
 def send_otp(user, task="verification"):
-    otp_code = str(random.randint(10000, 99999))
+    otp_code = str(random.randint(1000, 9999))
 
     OTP.objects.filter(user=user).delete()
     OTP.objects.create(user=user, otp=otp_code)

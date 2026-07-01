@@ -109,9 +109,21 @@ class GuestBookingViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
     
     def get_queryset(self):
-        return Booking.objects.filter(user=self.request.user).select_related('property').annotate(
+        queryset = Booking.objects.filter(user=self.request.user).select_related('property').annotate(
             property_avg_rating=Avg('property__reviews__rating')
         )
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            status_param = status_param.upper()
+            if status_param == 'ACTIVE':
+                queryset = queryset.filter(status__in=['CONFIRMED', 'CHECKED_IN'])
+            elif status_param == 'PENDING':
+                queryset = queryset.filter(status='PENDING')
+            elif status_param == 'CANCEL' or status_param == 'CANCELLED':
+                queryset = queryset.filter(status='CANCELLED')
+            elif status_param != 'ALL':
+                queryset = queryset.filter(status=status_param)
+        return queryset
         
 
     def get_serializer_class(self):
@@ -229,9 +241,16 @@ class GuestBookingViewSet(viewsets.ModelViewSet):
         booking.property.avg_rating = getattr(booking, 'property_avg_rating', 0.0) or 0.0
         
         serializer = self.get_serializer(booking, context={'request': request})
+        
+        from apps.auth.models import Document
+        from apps.auth.serializers import UploadDocumentSerializer
+        docs = Document.objects.filter(user=booking.user)
+        docs_data = UploadDocumentSerializer(docs, many=True).data
+        
         return Response({
             "status": 200, "success": True, "message": "Booking details fetched successfully",
-            "data": serializer.data
+            "data": serializer.data,
+            "docs": docs_data
         })
 
 
@@ -251,6 +270,22 @@ class CancelBookingView(views.APIView):
         booking.status = "CANCELLED"
         booking.save()
         return Response({"status": 200, "success": True, "message": "Booking cancelled successfully"})
+
+class ConfirmBookingView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(request=None, responses={200: dict})
+    def patch(self, request, booking_id):
+        booking = Booking.objects.filter(id=booking_id, property__owner=request.user).first()
+        if not booking:
+            return Response({"status": 404, "success": False, "message": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        if booking.status == "CONFIRMED":
+            return Response({"status": 400, "success": False, "message": "Booking already confirmed"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        booking.status = "CONFIRMED"
+        booking.save()
+        return Response({"status": 200, "success": True, "message": "Booking confirmed successfully, and guest documents auto-approved"})
 
 
 
@@ -289,13 +324,11 @@ class OwnerBookingViewSet(viewsets.ReadOnlyModelViewSet):
             
         booking.property.avg_rating = getattr(booking, 'property_avg_rating', 0.0) or 0.0
         
-        docs = [
-            (f"{settings.BACKEND_URI}{doc.document_file.url}" if doc.document_file else "", doc.document_type)
-            for doc in Document.objects.filter(user=booking.user)
-        ]
+        from apps.auth.serializers import UploadDocumentSerializer
+        docs_data = UploadDocumentSerializer(Document.objects.filter(user=booking.user), many=True).data
         
         serializer = BookingDetailsSerializer(booking, context={'request': request})
         return Response({
             "status": 200, "success": True, "message": "Booking details fetched successfully",
-            "data": serializer.data, "docs": docs
+            "data": serializer.data, "docs": docs_data
         })

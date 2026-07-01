@@ -25,3 +25,35 @@ class AuthDRFTests(APITestCase):
         
         # Verify the errors field is formatted as a single string message
         self.assertEqual(response2.data["errors"], "User with this User Email already exists.")
+
+    def test_multiple_document_upload(self):
+        user = User.objects.create_user(
+            email="uploader@example.com",
+            password="password123",
+            phone="01722222222",
+            name="Uploader User",
+            role="guest"
+        )
+        self.client.force_authenticate(user=user)
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        file1 = SimpleUploadedFile("passport.png", b"file_content_1", content_type="image/png")
+        file2 = SimpleUploadedFile("nid.png", b"file_content_2", content_type="image/png")
+
+        data = {
+            "document_type": ["Passport", "NID"],
+            "document_file": [file1, file2]
+        }
+
+        url = "/auth/api/v1/upload-document/"
+        response = self.client.post(url, data, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Successfully uploaded 2 document(s).")
+
+        from apps.auth.models import Document
+        docs = Document.objects.filter(user=user)
+        self.assertEqual(docs.count(), 2)
+        types = [doc.document_type for doc in docs]
+        self.assertIn("Passport", types)
+        self.assertIn("NID", types)

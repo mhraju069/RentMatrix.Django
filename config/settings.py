@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "apps.property",
     "apps.booking",
     "apps.notify",
+    "apps.currency_and_language",
 ]
 
 AUTH_USER_MODEL = 'authentications.User'

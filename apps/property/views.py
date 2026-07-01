@@ -16,56 +16,135 @@ from .serializers import (
 )   
 from apps.booking.models import Booking
 
+def apply_property_filters(properties, query_params):
+    search = query_params.get('search')
+    if search:
+        properties = properties.filter(Q(name__icontains=search) | Q(address__icontains=search))
+        
+    bed = query_params.get('bed')
+    if bed:
+        properties = properties.filter(bedroom=bed)
+        
+    bath = query_params.get('bath')
+    if bath:
+        properties = properties.filter(bathroom=bath)
+        
+    p_type = query_params.get('type', 'ANY')
+    if p_type != 'ANY':
+        properties = properties.filter(type=p_type)
+        
+    sea_view = query_params.get('sea_view')
+    if sea_view and str(sea_view).lower() in ("true", "1"):
+        properties = properties.filter(sea_view=True)
+        
+    from datetime import datetime
+    start_date = query_params.get('start_date')
+    end_date = query_params.get('end_date')
+    status_param = query_params.get('status') or query_params.get('availability')
+    if status_param:
+        status_param = status_param.upper()
+    else:
+        status_param = 'ANY'
+    
+    start_d = None
+    end_d = None
+    if start_date and end_date:
+        try:
+            start_d = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end_d = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+            
+    if start_d and end_d:
+        booked_property_ids = Booking.objects.filter(
+            status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN'],
+            check_in__lt=end_d,
+            check_out__gt=start_d
+        ).values_list('property_id', flat=True)
+        
+        if status_param == "BOOKED":
+            properties = properties.filter(id__in=booked_property_ids)
+        elif status_param == "AVAILABLE":
+            properties = properties.exclude(id__in=booked_property_ids).exclude(status="CLOSED")
+        else:
+            properties = properties.exclude(status="CLOSED")
+    else:
+        if status_param == "BOOKED":
+            booked_property_ids = Booking.objects.filter(
+                status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN']
+            ).values_list('property_id', flat=True)
+            properties = properties.filter(id__in=booked_property_ids)
+        elif status_param == "AVAILABLE":
+            properties = properties.filter(status="AVAILABLE")
+        else:
+            properties = properties.exclude(status="CLOSED")
+            
+    return properties
+
 class PropertyGuestViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated] # Originally IsAuthenticated in Bolt
     serializer_class = PropertyListSerializer
     
     def get_queryset(self):
         properties = Property.objects.all()
+        properties = apply_property_filters(properties, self.request.query_params)
+            
+        # Proximity filtering / sorting
+        lat = self.request.query_params.get('latitude')
+        lng = self.request.query_params.get('longitude')
+        radius_param = self.request.query_params.get('radius')
         
-        search = self.request.query_params.get('search')
-        if search:
-            properties = properties.filter(Q(name__icontains=search) | Q(address__icontains=search))
-            
-        bed = self.request.query_params.get('bed')
-        if bed:
-            properties = properties.filter(bedroom=bed)
-            
-        bath = self.request.query_params.get('bath')
-        if bath:
-            properties = properties.filter(bathroom=bath)
-            
-        p_type = self.request.query_params.get('type', 'ANY')
-        if p_type != 'ANY':
-            properties = properties.filter(type=p_type)
-            
-        sea_view = self.request.query_params.get('sea_view')
-        if sea_view and str(sea_view).lower() in ("true", "1"):
-            properties = properties.filter(sea_view=True)
-            
-        from datetime import datetime
-        start_date = self.request.query_params.get('start_date')
-        end_date = self.request.query_params.get('end_date')
+        self.distances = {}
         
-        start_d = None
-        end_d = None
-        if start_date and end_date:
+        if lat and lng:
+            import math
+            def haversine_distance(lat1, lon1, lat2, lon2):
+                lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+                dlat = lat2 - lat1
+                dlon = lon2 - lon1
+                a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+                c = 2 * math.asin(math.sqrt(a))
+                r = 6371 # Radius of earth in kilometers
+                return c * r
+
             try:
-                start_d = datetime.strptime(start_date, "%Y-%m-%d").date()
-                end_d = datetime.strptime(end_date, "%Y-%m-%d").date()
+                user_lat = float(lat)
+                user_lng = float(lng)
+                
+                # Fetch queryset evaluated list
+                property_list = list(properties)
+                valid_properties = []
+                for p in property_list:
+                    if p.latitude is not None and p.longitude is not None:
+                        dist = haversine_distance(user_lat, user_lng, p.latitude, p.longitude)
+                        p.distance = dist
+                        valid_properties.append(p)
+                
+                # Filter by radius if specified
+                if radius_param:
+                    try:
+                        max_radius = float(radius_param)
+                        valid_properties = [p for p in valid_properties if p.distance <= max_radius]
+                    except ValueError:
+                        pass
+                
+                # Sort closest first
+                valid_properties.sort(key=lambda p: p.distance)
+                
+                # Populate distances map
+                self.distances = {p.id: p.distance for p in valid_properties}
+                
+                # Convert back to sorted queryset
+                sorted_ids = [p.id for p in valid_properties]
+                if sorted_ids:
+                    from django.db.models import Case, When
+                    preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(sorted_ids)])
+                    properties = Property.objects.filter(id__in=sorted_ids).order_by(preserved)
+                else:
+                    properties = Property.objects.none()
             except ValueError:
                 pass
-                
-        if start_d and end_d:
-            booked_property_ids = Booking.objects.filter(
-                status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN'],
-                check_in__lt=end_d,
-                check_out__gt=start_d
-            ).values_list('property_id', flat=True)
-            properties = properties.exclude(id__in=booked_property_ids).exclude(status="CLOSED")
-        else:
-            properties = properties.filter(status="AVAILABLE")
-            
+
         return properties.annotate(avg_rating=Avg('reviews__rating'))
 
     @extend_schema(
@@ -74,6 +153,11 @@ class PropertyGuestViewSet(viewsets.ReadOnlyModelViewSet):
             OpenApiParameter('search', OpenApiTypes.STR, required=False),
             OpenApiParameter('start_date', OpenApiTypes.STR, required=False),
             OpenApiParameter('end_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('status', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('availability', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('latitude', OpenApiTypes.FLOAT, description='Latitude for proximity search', required=False),
+            OpenApiParameter('longitude', OpenApiTypes.FLOAT, description='Longitude for proximity search', required=False),
+            OpenApiParameter('radius', OpenApiTypes.FLOAT, description='Search radius in kilometers', required=False),
             OpenApiParameter('sea_view', OpenApiTypes.BOOL, required=False),
             OpenApiParameter('bed', OpenApiTypes.INT, required=False),
             OpenApiParameter('bath', OpenApiTypes.INT, required=False),
@@ -81,12 +165,18 @@ class PropertyGuestViewSet(viewsets.ReadOnlyModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        serializer = self.get_serializer(queryset, many=True, context={'request': request, 'view': self})
         return Response({
             "status": 200, "message": "Properties fetched successfully", 
             "success": True, "data": serializer.data
         })
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('latitude', OpenApiTypes.FLOAT, description='Latitude of user to calculate distance', required=False),
+            OpenApiParameter('longitude', OpenApiTypes.FLOAT, description='Longitude of user to calculate distance', required=False),
+        ]
+    )
     def retrieve(self, request, *args, **kwargs):
         property_id = kwargs.get('pk')
         prop = Property.objects.select_related('owner').filter(id=property_id).first()
@@ -96,8 +186,243 @@ class PropertyGuestViewSet(viewsets.ReadOnlyModelViewSet):
         Property.objects.filter(id=property_id).update(views=F('views') + 1)
         prop.refresh_from_db()
         
-        serializer = PropertyDetailSerializer(prop, context={'request': request})
+        lat = request.query_params.get('latitude')
+        lng = request.query_params.get('longitude')
+        if lat and lng:
+            try:
+                import math
+                user_lat = float(lat)
+                user_lng = float(lng)
+                if prop.latitude is not None and prop.longitude is not None:
+                    lat1, lon1, lat2, lon2 = map(math.radians, [user_lat, user_lng, float(prop.latitude), float(prop.longitude)])
+                    dlat = lat2 - lat1
+                    dlon = lon2 - lon1
+                    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+                    c = 2 * math.asin(math.sqrt(a))
+                    prop.distance = c * 6371
+            except ValueError:
+                pass
+        
+        serializer = PropertyDetailSerializer(prop, context={'request': request, 'view': self})
         return Response(serializer.data)
+
+class PropertyHomeView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PropertyListSerializer
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('type', OpenApiTypes.STR, description='Property type (ANY, HOUSE, etc.)', required=False),
+            OpenApiParameter('search', OpenApiTypes.STR, required=False),
+            OpenApiParameter('start_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('end_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('status', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('availability', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('latitude', OpenApiTypes.FLOAT, description='Latitude for proximity search', required=False),
+            OpenApiParameter('longitude', OpenApiTypes.FLOAT, description='Longitude for proximity search', required=False),
+            OpenApiParameter('radius', OpenApiTypes.FLOAT, description='Search radius in kilometers', required=False),
+            OpenApiParameter('sea_view', OpenApiTypes.BOOL, required=False),
+            OpenApiParameter('bed', OpenApiTypes.INT, required=False),
+            OpenApiParameter('bath', OpenApiTypes.INT, required=False),
+        ]
+    )
+    def get(self, request):
+        # Apply base filters first
+        base_qs = Property.objects.all()
+        base_qs = apply_property_filters(base_qs, request.query_params)
+
+        # 1. Fetch recommended properties (sorted by views and avg_rating descending)
+        recommended_qs = base_qs.annotate(
+            avg_rating=Avg('reviews__rating')
+        ).order_by('-views', '-avg_rating')[:10]
+        
+        # 2. Fetch popular nearby properties
+        lat = request.query_params.get('latitude')
+        lng = request.query_params.get('longitude')
+        radius_param = request.query_params.get('radius')
+        
+        # Default fallback for popular nearby if lat/lng are not provided
+        popular_nearby_qs = base_qs.annotate(
+            avg_rating=Avg('reviews__rating')
+        ).order_by('-avg_rating', '-views')[:10]
+        
+        self.distances = {}
+        
+        if lat and lng:
+            try:
+                user_lat = float(lat)
+                user_lng = float(lng)
+                import math
+                def haversine_distance(lat1, lon1, lat2, lon2):
+                    lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+                    dlat = lat2 - lat1
+                    dlon = lon2 - lon1
+                    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+                    c = 2 * math.asin(math.sqrt(a))
+                    return c * 6371 # km
+
+                all_avail = list(base_qs)
+                valid_props = []
+                for p in all_avail:
+                    if p.latitude is not None and p.longitude is not None:
+                        p.distance = haversine_distance(user_lat, user_lng, p.latitude, p.longitude)
+                        valid_props.append(p)
+                
+                # Filter by radius if specified
+                if radius_param:
+                    try:
+                        max_radius = float(radius_param)
+                        valid_props = [p for p in valid_props if p.distance <= max_radius]
+                    except ValueError:
+                        pass
+
+                # Sort closest first
+                valid_props.sort(key=lambda p: p.distance)
+                
+                self.distances = {p.id: p.distance for p in valid_props}
+                
+                # Convert back to queryset preserving order
+                sorted_ids = [p.id for p in valid_props[:10]]
+                if sorted_ids:
+                    from django.db.models import Case, When
+                    preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(sorted_ids)])
+                    popular_nearby_qs = Property.objects.filter(id__in=sorted_ids).order_by(preserved).annotate(
+                        avg_rating=Avg('reviews__rating')
+                    )
+                else:
+                    popular_nearby_qs = Property.objects.none()
+            except ValueError:
+                pass
+        
+        # Serialize recommended
+        rec_serializer = PropertyListSerializer(recommended_qs, many=True, context={'request': request, 'view': self})
+        
+        # Serialize popular nearby
+        near_serializer = PropertyListSerializer(popular_nearby_qs, many=True, context={'request': request, 'view': self})
+        
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": "Home sections fetched successfully",
+            "data": {
+                "recommended": rec_serializer.data,
+                "popular_nearby": near_serializer.data
+            }
+        })
+
+class RecommendedPropertiesView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PropertyListSerializer
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('type', OpenApiTypes.STR, description='Property type (ANY, HOUSE, etc.)', required=False),
+            OpenApiParameter('search', OpenApiTypes.STR, required=False),
+            OpenApiParameter('start_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('end_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('status', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('availability', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('sea_view', OpenApiTypes.BOOL, required=False),
+            OpenApiParameter('bed', OpenApiTypes.INT, required=False),
+            OpenApiParameter('bath', OpenApiTypes.INT, required=False),
+        ]
+    )
+    def get(self, request):
+        properties = Property.objects.all()
+        properties = apply_property_filters(properties, request.query_params)
+        
+        properties = properties.annotate(
+            avg_rating=Avg('reviews__rating')
+        ).order_by('-views', '-avg_rating')
+        
+        serializer = PropertyListSerializer(properties, many=True, context={'request': request, 'view': self})
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": "Recommended properties fetched successfully",
+            "data": serializer.data
+        })
+
+class PopularNearbyPropertiesView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PropertyListSerializer
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('type', OpenApiTypes.STR, description='Property type (ANY, HOUSE, etc.)', required=False),
+            OpenApiParameter('search', OpenApiTypes.STR, required=False),
+            OpenApiParameter('start_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('end_date', OpenApiTypes.STR, required=False),
+            OpenApiParameter('status', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('availability', OpenApiTypes.STR, description='Availability status (AVAILABLE, BOOKED, ANY)', required=False),
+            OpenApiParameter('sea_view', OpenApiTypes.BOOL, required=False),
+            OpenApiParameter('bed', OpenApiTypes.INT, required=False),
+            OpenApiParameter('bath', OpenApiTypes.INT, required=False),
+            OpenApiParameter('latitude', OpenApiTypes.FLOAT, description='Latitude for proximity search', required=False),
+            OpenApiParameter('longitude', OpenApiTypes.FLOAT, description='Longitude for proximity search', required=False),
+            OpenApiParameter('radius', OpenApiTypes.FLOAT, description='Search radius in kilometers', required=False),
+        ]
+    )
+    def get(self, request):
+        properties = Property.objects.all()
+        properties = apply_property_filters(properties, request.query_params)
+        
+        lat = request.query_params.get('latitude')
+        lng = request.query_params.get('longitude')
+        radius_param = request.query_params.get('radius')
+        
+        self.distances = {}
+        
+        if lat and lng:
+            try:
+                user_lat = float(lat)
+                user_lng = float(lng)
+                import math
+                def haversine_distance(lat1, lon1, lat2, lon2):
+                    lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+                    dlat = lat2 - lat1
+                    dlon = lon2 - lon1
+                    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+                    c = 2 * math.asin(math.sqrt(a))
+                    return c * 6371 # km
+
+                property_list = list(properties)
+                valid_properties = []
+                for p in property_list:
+                    if p.latitude is not None and p.longitude is not None:
+                        p.distance = haversine_distance(user_lat, user_lng, p.latitude, p.longitude)
+                        valid_properties.append(p)
+                
+                if radius_param:
+                    try:
+                        max_radius = float(radius_param)
+                        valid_properties = [p for p in valid_properties if p.distance <= max_radius]
+                    except ValueError:
+                        pass
+                        
+                valid_properties.sort(key=lambda p: p.distance)
+                self.distances = {p.id: p.distance for p in valid_properties}
+                
+                sorted_ids = [p.id for p in valid_properties]
+                if sorted_ids:
+                    from django.db.models import Case, When
+                    preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(sorted_ids)])
+                    properties = Property.objects.filter(id__in=sorted_ids).order_by(preserved)
+                else:
+                    properties = Property.objects.none()
+            except ValueError:
+                pass
+        else:
+            properties = properties.order_by('-views')
+
+        properties = properties.annotate(avg_rating=Avg('reviews__rating'))
+        serializer = PropertyListSerializer(properties, many=True, context={'request': request, 'view': self})
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": "Popular nearby properties fetched successfully",
+            "data": serializer.data
+        })
 
 class FavouritePropertyView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -122,7 +447,15 @@ class FavouritePropertyView(views.APIView):
             
         return Response({"success": True, "message": message}, status=status.HTTP_200_OK)
         
-    def get(self, request):
+    def get(self, request, property_id=None):
+        if property_id is not None:
+            is_fav = Favourites.objects.filter(user=request.user, property_id=property_id).exists()
+            return Response({
+                "status": 200,
+                "success": True,
+                "favourite": is_fav
+            }, status=status.HTTP_200_OK)
+
         favourite_properties = Favourites.objects.filter(user=request.user).select_related('property')
         properties = [fav.property for fav in favourite_properties]
         # Annotate with avg_rating
@@ -201,7 +534,13 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
             elif status_param == "CLOSED":
                 properties = properties.filter(status="CLOSED")
                 
-        return properties.annotate(avg_rating=Avg('reviews__rating'))
+        from django.db.models import Count, Value, DecimalField
+        from django.db.models.functions import Coalesce
+        from decimal import Decimal
+        return properties.annotate(
+            avg_rating=Coalesce(Avg('reviews__rating'), Value(Decimal('0.0')), output_field=DecimalField()),
+            booking_count=Count('booking', filter=~Q(booking__status='CANCELLED'))
+        ).order_by('-booking_count', '-avg_rating')
 
     @extend_schema(
         parameters=[
@@ -217,7 +556,52 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        # The schema expected id, cover, name, address, avg_rating
+        
+        # Calculate overall metrics for the owner's properties
+        owner_properties = Property.objects.filter(owner=request.user)
+        num_properties = owner_properties.count()
+        
+        # 1. Occupancy Rate
+        total_booked_days = 0
+        if num_properties > 0:
+            from datetime import date, timedelta
+            end_date = date.today()
+            start_date = end_date - timedelta(days=30)
+            
+            # Fetch overlapping bookings
+            overlapping_bookings = Booking.objects.filter(
+                property__owner=request.user,
+                status__in=['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'],
+                check_in__lt=end_date,
+                check_out__gt=start_date
+            )
+            for booking in overlapping_bookings:
+                overlap_start = max(booking.check_in, start_date)
+                overlap_end = min(booking.check_out, end_date)
+                overlap_days = (overlap_end - overlap_start).days
+                if overlap_days > 0:
+                    total_booked_days += overlap_days
+            
+            total_capacity_days = num_properties * 30
+            occupancy_rate = (total_booked_days / total_capacity_days) * 100
+        else:
+            occupancy_rate = 0.0
+            
+        # 2. Total Bookings (non-cancelled)
+        total_bookings = Booking.objects.filter(property__owner=request.user).exclude(status='CANCELLED').count()
+        
+        # 3. Pending Requests
+        pending_requests = Booking.objects.filter(property__owner=request.user, status='PENDING').count()
+        
+        # 4. Avg. Rating
+        reviews = Review.objects.filter(property__owner=request.user)
+        reviews_count = reviews.count()
+        if reviews_count > 0:
+            avg_rating = sum(r.rating for r in reviews) / reviews_count
+        else:
+            avg_rating = 0.0
+
+        # Build list of properties
         data = []
         for prop in queryset:
             avg = getattr(prop, 'avg_rating', 0.0) or 0.0
@@ -231,13 +615,20 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
                 "area": prop.area,
                 "price_monthly": prop.price_monthly,
                 "price_daily": prop.price_daily,
-                "cover": f"{settings.BACKEND_URI}{prop.cover_image.url}" if prop.cover_image else "",
+                "cover": prop.cover_image.url if prop.cover_image else "",
                 "avg_rating": f"{avg:.1f}",
                 "address": prop.address
             })
+            
         return Response({
-            "status": 200, "message": "Properties fetched successfully",
-            "success": True, "properties": data
+            "status": 200, 
+            "message": "Properties fetched successfully",
+            "success": True, 
+            "occupancy_rate": f"{occupancy_rate:.0f}%",
+            "total_bookings": total_bookings,
+            "pending_requests": pending_requests,
+            "avg_rating": f"{avg_rating:.1f}",
+            "properties": data
         })
 
     def retrieve(self, request, *args, **kwargs):
@@ -247,12 +638,57 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
             return Response({"status": 404, "success": False, "message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
             
         serializer = PropertyDetailSerializer(prop, context={'request': request})
-        total_bookings = Booking.objects.filter(property=prop).count()
+        bookings = Booking.objects.filter(property=prop)
+        total_bookings = bookings.exclude(status='CANCELLED').count()
+        
+        # Calculate occupancy rate for this property over the last 30 days
+        from datetime import date, timedelta
+        end_date = date.today()
+        start_date = end_date - timedelta(days=30)
+        
+        # Overlapping bookings
+        overlapping_bookings = bookings.filter(
+            status__in=['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'],
+            check_in__lt=end_date,
+            check_out__gt=start_date
+        )
+        total_booked_days = 0
+        for booking in overlapping_bookings:
+            overlap_start = max(booking.check_in, start_date)
+            overlap_end = min(booking.check_out, end_date)
+            overlap_days = (overlap_end - overlap_start).days
+            if overlap_days > 0:
+                total_booked_days += overlap_days
+        
+        occupancy_rate = (total_booked_days / 30.0) * 100
+        
+        # Avg stay
+        non_cancelled_bookings = bookings.exclude(status='CANCELLED')
+        nc_count = non_cancelled_bookings.count()
+        if nc_count > 0:
+            avg_stay = sum((b.check_out - b.check_in).days for b in non_cancelled_bookings) / nc_count
+        else:
+            avg_stay = 0.0
+
+        # Avg rating
+        reviews = prop.reviews.all()
+        reviews_count = reviews.count()
+        if reviews_count > 0:
+            avg_rating = sum(r.rating for r in reviews) / reviews_count
+        else:
+            avg_rating = 0.0
         
         return Response({
-            "status": 200, "message": "Property details fetched successfully",
-            "success": True, "occupancy": "Not Implemented Yet",
-            "total_bookings": total_bookings, "avg_stay": "Not Implemented Yet",
+            "status": 200, 
+            "message": "Property details fetched successfully",
+            "success": True, 
+            "occupancy": f"{occupancy_rate:.0f}%",
+            "occupancy_rate": f"{occupancy_rate:.0f}%",
+            "total_bookings": total_bookings, 
+            "avg_stay": f"{avg_stay:.1f} days",
+            "avg_stay_duration": f"{avg_stay:.1f} days",
+            "avg_rating": f"{avg_rating:.1f}",
+            "total_views": prop.views,
             "property": serializer.data
         })
 
@@ -358,6 +794,8 @@ class CreatePropertyDRF(BasePropertyMutationView):
             "cover": cover,
             "gallery": gallery,
             "add_ons_prices": clean_prices("add_ons_prices"),
+            "amenities": clean_prices("amenities"),
+            "activities": clean_prices("activities"),
             "weekend_dates": self.parse_single_json_field(request.data.get("weekend_dates")),
             "vacations": self.parse_single_json_field(request.data.get("vacations")),
             "other_charges": clean_prices("other_charges"),
@@ -366,7 +804,7 @@ class CreatePropertyDRF(BasePropertyMutationView):
         })
         
         # Remove keys that ended up as empty lists if they aren't required, so serializer doesn't complain if they are invalid
-        for k in ["gallery", "add_ons_prices", "weekend_dates", "vacations", "other_charges", "cover"]:
+        for k in ["gallery", "add_ons_prices", "amenities", "activities", "weekend_dates", "vacations", "other_charges", "cover"]:
             if not data.get(k):
                 data.pop(k, None)
         
@@ -425,7 +863,7 @@ class UpdatePropertyDRF(BasePropertyMutationView):
                     gallery.append(g_item)
                 data["gallery"] = gallery
 
-        for price_field in ["add_ons_prices", "other_charges"]:
+        for price_field in ["add_ons_prices", "other_charges", "amenities", "activities"]:
             if price_field in request.data:
                 parsed = self.parse_json_field(request.data.get(price_field) or self.safe_getlist(request, price_field))
                 if parsed and isinstance(parsed, list) and isinstance(parsed[0], str) and parsed[0] in ("string", ""):

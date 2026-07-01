@@ -14,7 +14,7 @@ class PropertyOwnerSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         if obj.image:
-            return f"{settings.BACKEND_URI}{obj.image.url}"
+            return obj.image.url
         return None
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -29,20 +29,24 @@ class PropertyListSerializer(serializers.ModelSerializer):
     average_rating = serializers.SerializerMethodField()
     favourite = serializers.SerializerMethodField()
     price = serializers.FloatField(source='price_daily', required=False) # Maps to old price logic
+    price_daily = serializers.FloatField(required=False)
+    price_monthly = serializers.FloatField(required=False)
     size = serializers.CharField(source='area')
+    status = serializers.SerializerMethodField()
+    distance = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
         fields = [
-            'id', 'name', 'price', 'bathroom', 'bedroom', 'size', 
-            'type', 'sea_view', 'cover', 'average_rating', 'address', 
-            'views', 'favourite', 'discount'
+            'id', 'name', 'price', 'price_daily', 'price_monthly', 'bathroom', 'bedroom', 'size', 
+            'type', 'status', 'sea_view', 'cover', 'average_rating', 'address', 
+            'views', 'favourite', 'discount', 'distance'
         ]
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_cover(self, obj):
         if obj.cover_image:
-            return f"{settings.BACKEND_URI}{obj.cover_image.url}"
+            return obj.cover_image.url
         return ""
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -56,12 +60,51 @@ class PropertyListSerializer(serializers.ModelSerializer):
             return Favourites.objects.filter(user=request.user, property=obj).exists()
         return False
 
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_status(self, obj):
+        request = self.context.get('request')
+        if request:
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            if start_date and end_date:
+                from datetime import datetime
+                try:
+                    start_d = datetime.strptime(start_date, "%Y-%m-%d").date()
+                    end_d = datetime.strptime(end_date, "%Y-%m-%d").date()
+                    from apps.booking.models import Booking
+                    is_booked = Booking.objects.filter(
+                        property=obj,
+                        status__in=['PENDING', 'CONFIRMED', 'CHECKED_IN'],
+                        check_in__lt=end_d,
+                        check_out__gt=start_d
+                    ).exists()
+                    if is_booked:
+                        return "Booked"
+                except Exception:
+                    pass
+        val = getattr(obj, 'status', 'AVAILABLE') or 'AVAILABLE'
+        return val.capitalize()
+
+    @extend_schema_field(OpenApiTypes.FLOAT)
+    def get_distance(self, obj):
+        view = self.context.get('view')
+        if view and hasattr(view, 'distances'):
+            return view.distances.get(obj.id)
+        return getattr(obj, 'distance', None)
+
 
 
 class GallerySerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
     class Meta:
         model = Gallery
         fields = ["id","type", "file"]
+
+    def get_file(self, obj):
+        if obj.file:
+            return obj.file.url
+        return ""
 
 
 
@@ -69,6 +112,16 @@ class AddOnsPriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = AddOnsPrice
         fields = ["id","service", "price"]
+
+class AmenitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Amenity
+        fields = ["id", "name"]
+
+class ActivitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ["id", "name", "details"]
 
 class WeekendSerializer(serializers.ModelSerializer):
     weekend = serializers.JSONField(required=False)
@@ -89,8 +142,10 @@ class OtherChargesSerializer(serializers.ModelSerializer):
 
 class PropertyDetailSerializer(serializers.ModelSerializer):
     owner = PropertyOwnerSerializer()
-    gallery = GallerySerializer(many=True, read_only=True)
+    gallery = GallerySerializer(source='galleries', many=True, read_only=True)
     add_ons_prices = AddOnsPriceSerializer(many=True, read_only=True)
+    amenities = AmenitySerializer(many=True, read_only=True)
+    activities = ActivitySerializer(many=True, read_only=True)
     weekend_dates = WeekendSerializer(read_only=True)
     vacations = VacetionsSerializer(read_only=True)
     other_charges = OtherChargesSerializer(many=True, read_only=True)
@@ -99,23 +154,46 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     average_rating = serializers.SerializerMethodField()
     favourite = serializers.SerializerMethodField()
     cover = serializers.SerializerMethodField()
-    price = serializers.FloatField(source='price_daily', required=False)
+    price_daily = serializers.FloatField(required=False)
+    price_monthly = serializers.FloatField(required=False)
     size = serializers.CharField(source='area')
+    distance = serializers.SerializerMethodField()
+    rating_breakdown = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
         fields = [
-            'name', 'about', 'price', 'owner', 'bathroom', 'bedroom', 'size',
+            'id', 'name', 'about', 'price_daily', 'price_monthly', 'owner', 'bathroom', 'bedroom', 'size',
             'type', 'status', 'verified', 'sea_view', 'review_count', 'cover',
-            'average_rating', 'address', 'latitude', 'longitude',
+            'average_rating', 'address', 'latitude', 'longitude', 'distance', 'rating_breakdown',
             'weekend_dates', 'vacations', 'other_charges',
-            'gallery', 'add_ons_prices', 'reviews', 'views', 'favourite', 'discount'
+            'gallery', 'add_ons_prices', 'amenities', 'activities', 'reviews', 'views', 'favourite', 'discount'
         ]
+
+    @extend_schema_field(OpenApiTypes.FLOAT)
+    def get_distance(self, obj):
+        view = self.context.get('view')
+        if view and hasattr(view, 'distances'):
+            return view.distances.get(obj.id)
+        return getattr(obj, 'distance', None)
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_rating_breakdown(self, obj):
+        breakdown = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+        ratings = obj.reviews.values_list('rating', flat=True)
+        for r in ratings:
+            try:
+                r_int = int(round(float(r)))
+                if r_int in breakdown:
+                    breakdown[r_int] += 1
+            except (ValueError, TypeError):
+                pass
+        return {str(k): v for k, v in breakdown.items()}
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_cover(self, obj):
         if obj.cover_image:
-            return f"{settings.BACKEND_URI}{obj.cover_image.url}"
+            return obj.cover_image.url
         return ""
 
     def get_reviews(self, obj):
@@ -144,8 +222,10 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
 
 
 class PropertySerializer(serializers.ModelSerializer):
-    gallery = GallerySerializer(many=True, required=False)
+    gallery = GallerySerializer(source='galleries', many=True, required=False)
     add_ons_prices = AddOnsPriceSerializer(many=True, required=False)
+    amenities = AmenitySerializer(many=True, required=False)
+    activities = ActivitySerializer(many=True, required=False)
     weekend_dates = WeekendSerializer(required=False)
     vacations = VacetionsSerializer(required=False)
     other_charges = OtherChargesSerializer(many=True, required=False)
@@ -179,12 +259,16 @@ class PropertySerializer(serializers.ModelSerializer):
             "other_charges",
             "gallery",
             "add_ons_prices",
+            "amenities",
+            "activities",
         ]
         read_only_fields = ["owner","created_at","updated_at"]
     
     def create(self, validated_data):
-        gallery = validated_data.pop("gallery", [])
+        gallery = validated_data.pop("galleries", [])
         add_ons_prices = validated_data.pop("add_ons_prices", [])
+        amenities = validated_data.pop("amenities", [])
+        activities = validated_data.pop("activities", [])
         weekend_dates = validated_data.pop("weekend_dates", None)
         vacations = validated_data.pop("vacations", None)
         other_charges = validated_data.pop("other_charges", [])
@@ -196,6 +280,12 @@ class PropertySerializer(serializers.ModelSerializer):
 
         for add_on in add_ons_prices:
             AddOnsPrice.objects.create(property=property, **add_on)
+
+        for amenity in amenities:
+            Amenity.objects.create(property=property, **amenity)
+
+        for activity in activities:
+            Activity.objects.create(property=property, **activity)
 
         if weekend_dates:
             Weekend.objects.create(property=property, **weekend_dates)
@@ -209,8 +299,10 @@ class PropertySerializer(serializers.ModelSerializer):
         return property
 
     def update(self, instance, validated_data):
-        gallery = validated_data.pop("gallery", None)
+        gallery = validated_data.pop("galleries", None)
         add_ons_prices = validated_data.pop("add_ons_prices", None)
+        amenities = validated_data.pop("amenities", None)
+        activities = validated_data.pop("activities", None)
         weekend_dates = validated_data.pop("weekend_dates", None)
         vacations = validated_data.pop("vacations", None)
         other_charges = validated_data.pop("other_charges", None)
@@ -228,6 +320,16 @@ class PropertySerializer(serializers.ModelSerializer):
             instance.add_ons_prices.all().delete()
             for add_on in add_ons_prices:
                 AddOnsPrice.objects.create(property=instance, **add_on)
+
+        if amenities is not None:
+            instance.amenities.all().delete()
+            for amenity in amenities:
+                Amenity.objects.create(property=instance, **amenity)
+
+        if activities is not None:
+            instance.activities.all().delete()
+            for activity in activities:
+                Activity.objects.create(property=instance, **activity)
 
         if weekend_dates is not None:
             if hasattr(instance, 'weekend_dates'):

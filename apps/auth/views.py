@@ -9,7 +9,8 @@ from .models import User, OTP, Document
 from .utils import send_otp, format_serializer_errors
 from .serializers import (
     CreateUserSerializer, LoginUserSerializer, GetOtpSerializer, VerifyOtpSerializer,
-    UpdateUserSerializer, ResetPasswordSerializer, UploadDocumentSerializer, UserDataSerializer
+    UpdateUserSerializer, ResetPasswordSerializer, UploadDocumentSerializer, UserDataSerializer,
+    MultipleUploadDocumentSerializer
 )
 
 def get_tokens_for_user(user):
@@ -201,16 +202,70 @@ class ResetPasswordView(APIView):
 
 class UploadDocumentView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UploadDocumentSerializer
+    serializer_class = MultipleUploadDocumentSerializer
 
-    @extend_schema(request=UploadDocumentSerializer)
+    @extend_schema(
+        request=MultipleUploadDocumentSerializer,
+        responses={
+            200: OpenApiResponse(description="Documents uploaded successfully"),
+            400: OpenApiResponse(description="Validation error / Mismatch error")
+        }
+    )
     def post(self, request):
-        serializer = UploadDocumentSerializer(data=request.data)
-        if serializer.is_valid():
-            Document.objects.create(
+        # Extract document types list
+        if hasattr(request.data, 'getlist'):
+            document_types = request.data.getlist('document_type')
+        else:
+            document_types = request.data.get('document_type')
+            if not isinstance(document_types, list):
+                document_types = [document_types] if document_types else []
+
+        # Extract document files list
+        if hasattr(request.FILES, 'getlist'):
+            document_files = request.FILES.getlist('document_file') or request.FILES.getlist('file')
+        else:
+            document_files = request.FILES.get('document_file') or request.FILES.get('file')
+            if not isinstance(document_files, list):
+                document_files = [document_files] if document_files else []
+
+        # Fallback to request.data if request.FILES didn't have it (parsed by DRF multipart parser into request.data)
+        if not document_files:
+            if hasattr(request.data, 'getlist'):
+                document_files = request.data.getlist('document_file') or request.data.getlist('file')
+            else:
+                document_files = request.data.get('document_file') or request.data.get('file')
+                if not isinstance(document_files, list):
+                    document_files = [document_files] if document_files else []
+
+        # Remove empty elements
+        document_types = [t for t in document_types if t]
+        document_files = [f for f in document_files if f]
+
+        if not document_types or not document_files:
+            return Response({
+                "status": 400,
+                "success": False,
+                "errors": "Both document_type and document_file are required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(document_types) != len(document_files):
+            return Response({
+                "status": 400,
+                "success": False,
+                "errors": f"Mismatch between document types ({len(document_types)}) and document files ({len(document_files)})."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        created_docs = []
+        for doc_type, doc_file in zip(document_types, document_files):
+            doc = Document.objects.create(
                 user=request.user,
-                document_type=serializer.validated_data['document_type'],
-                document_file=request.FILES.get('document_file') or request.FILES.get('file')
+                document_type=str(doc_type)[:20],
+                document_file=doc_file
             )
-            return Response({"status": 200, "success": True, "message": "Document uploaded successfully"}, status=status.HTTP_200_OK)
-        return Response({"status": 400, "success": False, "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
+            created_docs.append(doc)
+
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": f"Successfully uploaded {len(created_docs)} document(s)."
+        }, status=status.HTTP_200_OK)

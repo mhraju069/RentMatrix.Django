@@ -15,7 +15,7 @@ class UserDataSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_image(self, obj):
         if obj.image:
-            return f"{settings.BACKEND_URI}{obj.image.url}"
+            return obj.image.url
         return None
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -50,6 +50,26 @@ class ResetPasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True)
 
 class UploadDocumentSerializer(serializers.ModelSerializer):
+    document_file = serializers.SerializerMethodField()
+    document_file_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Document
-        fields = ['document_type', 'document_file']
+        fields = ['id', 'document_type', 'document_file', 'document_file_url', 'is_verified', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'is_verified', 'created_at', 'updated_at']
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_document_file(self, obj):
+        if obj.document_file:
+            return obj.document_file.url
+        return ""
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_document_file_url(self, obj):
+        if obj.document_file:
+            return obj.document_file.url
+        return ""
+
+class MultipleUploadDocumentSerializer(serializers.Serializer):
+    document_type = serializers.ListField(child=serializers.CharField())
+    document_file = serializers.ListField(child=serializers.FileField())

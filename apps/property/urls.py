@@ -8,6 +8,9 @@ urlpatterns = [
     path('guest/favourite/', FavouritePropertyView.as_view(), name='favourite-list'),
     path('guest/favourite/<uuid:property_id>/', FavouritePropertyView.as_view(), name='favourite-action'),
     path('guest/report/', ReportPropertyView.as_view(), name='report-property'),
+    path('guest/home/', PropertyHomeView.as_view(), name='guest-property-home'),
+    path('guest/recommended/', RecommendedPropertiesView.as_view(), name='guest-recommended-properties'),
+    path('guest/popular-nearby/', PopularNearbyPropertiesView.as_view(), name='guest-popular-nearby-properties'),
     
     # Owner Endpoints
     path('owner/property/', PropertyOwnerViewSet.as_view({'get': 'list'}), name='owner-property-list'),
