@@ -2,6 +2,7 @@ from rest_framework import views, status, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from django.db.models import F, Avg, Q
 from django.http import JsonResponse
@@ -922,3 +923,53 @@ class ReportPropertyView(views.APIView):
             serializer.save(user=request.user)
             return Response({"status": 200, "success": True, "message": "Report submitted successfully"})
         return Response({"status": 400, "success": False, "message": "Invalid data", "errors": format_serializer_errors(serializer.errors)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": "Top performing properties fetched successfully",
+            "count": self.page.paginator.count,
+            "next": self.get_next_link(),
+            "previous": self.get_previous_link(),
+            "data": data
+        })
+
+class TopPerformingView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PropertyListSerializer
+    pagination_class = CustomPageNumberPagination
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('page', OpenApiTypes.INT, description='A page number within the paginated result set.', required=False),
+            OpenApiParameter('page_size', OpenApiTypes.INT, description='Number of results to return per page.', required=False),
+        ],
+        responses={200: dict}
+    )
+    def get(self, request):
+        from django.db.models import Avg
+        properties = Property.objects.filter(status="AVAILABLE").annotate(
+            avg_rating=Avg('reviews__rating')
+        ).order_by('-views')
+        
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(properties, request, view=self)
+        if page is not None:
+            serializer = self.serializer_class(page, many=True, context={'request': request})
+            return paginator.get_paginated_response(serializer.data)
+            
+        serializer = self.serializer_class(properties, many=True, context={'request': request})
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": "Top performing properties fetched successfully",
+            "data": serializer.data
+        })
