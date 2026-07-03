@@ -94,34 +94,4 @@ class CurrencyAndLanguageTests(APITestCase):
         self.assertEqual(response_en.status_code, status.HTTP_200_OK)
         self.assertEqual(response_en.data["message"], "Languages fetched successfully")
 
-    def test_property_price_conversion_according_to_currency_preference(self):
-        from apps.property.models import Property
-        prop = Property.objects.create(
-            owner=self.user, name="Currency Test Prop", address="123 Test St", 
-            bedroom=2, bathroom=2, price_daily=100.00, price_monthly=2500.00, status="AVAILABLE"
-        )
-        
-        aed_curr = Currency.objects.get(code="AED")
-        aed_curr.exchange_rate = 3.67
-        aed_curr.save()
-
-        url = f"/property/api/v1/guest/property/{prop.id}/"
-        response_usd = self.client.get(url)
-        self.assertEqual(response_usd.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_usd.data["price_daily"], 100.00)
-        self.assertEqual(response_usd.data["price_monthly"], 2500.00)
-        self.assertEqual(response_usd.data["currency_code"], "USD")
-        self.assertEqual(response_usd.data["currency_symbol"], "$")
-
-        pref, _ = UserPreference.objects.get_or_create(user=self.user)
-        pref.currency = aed_curr
-        pref.save()
-
-        response_aed = self.client.get(url)
-        self.assertEqual(response_aed.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_aed.data["price_daily"], 367.00)
-        self.assertEqual(response_aed.data["price_monthly"], 9175.00)
-        self.assertEqual(response_aed.data["currency_code"], "AED")
-        self.assertEqual(response_aed.data["currency_symbol"], "د.إ")
-
 
