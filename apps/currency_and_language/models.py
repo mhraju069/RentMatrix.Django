@@ -16,7 +16,6 @@ class Currency(models.Model):
     name = models.CharField(max_length=50, unique=True)
     code = models.CharField(max_length=10, unique=True)
     symbol = models.CharField(max_length=5, default='$')
-    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1.0000)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):

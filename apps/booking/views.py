@@ -69,22 +69,19 @@ class CalculateBookingPriceView(views.APIView):
                 except ValueError:
                     pass
                  
-            from apps.currency_and_language.utils import get_user_currency_and_rate
-            code, symbol, rate = get_user_currency_and_rate(request)
-
-            total_price = round(unit_price * total_duration * rate, 2)
+            total_price = unit_price * total_duration
             
-            # Multiply all breakdown elements by duration and rate for total transparency
+            # Multiply all breakdown elements by duration for total transparency
             total_breakdown = {
-                "base_price_total": round(breakdown["base_price"] * total_duration * rate, 2),
-                "other_charges": [{"name": c["name"], "percentage": c["percentage"], "total_amount": round(c["amount"] * total_duration * rate, 2)} for c in breakdown["other_charges"]],
-                "other_charges_total": round(breakdown["other_charges_total"] * total_duration * rate, 2),
-                "add_ons": [{"name": a["name"], "percentage": a["percentage"], "total_amount": round(a["amount"] * total_duration * rate, 2)} for a in breakdown["add_ons"]],
-                "add_ons_total": round(breakdown["add_ons_total"] * total_duration * rate, 2),
-                "vacation_surcharge_total": round(breakdown["vacation_surcharge"] * total_duration * rate, 2),
-                "weekend_surcharge_total": round(breakdown["weekend_surcharge"] * total_duration * rate, 2),
-                "discount_total": round(breakdown["discount_amount"] * total_duration * rate, 2),
-                "total_amount_before_discount": round(breakdown["total_before_discount"] * total_duration * rate, 2)
+                "base_price_total": breakdown["base_price"] * total_duration,
+                "other_charges": [{"name": c["name"], "percentage": c["percentage"], "total_amount": c["amount"] * total_duration} for c in breakdown["other_charges"]],
+                "other_charges_total": breakdown["other_charges_total"] * total_duration,
+                "add_ons": [{"name": a["name"], "percentage": a["percentage"], "total_amount": a["amount"] * total_duration} for a in breakdown["add_ons"]],
+                "add_ons_total": breakdown["add_ons_total"] * total_duration,
+                "vacation_surcharge_total": breakdown["vacation_surcharge"] * total_duration,
+                "weekend_surcharge_total": breakdown["weekend_surcharge"] * total_duration,
+                "discount_total": breakdown["discount_amount"] * total_duration,
+                "total_amount_before_discount": breakdown["total_before_discount"] * total_duration
             }
             
             return Response({
@@ -92,12 +89,10 @@ class CalculateBookingPriceView(views.APIView):
                 "message": "Price calculated successfully",
                 "price_type": price_type,
                 "total_duration": total_duration,
-                "base_unit_price": round(breakdown["base_price"] * rate, 2),
+                "base_unit_price": breakdown["base_price"],
                 "breakdown": total_breakdown,
-                "unit_price_after_discount": round(unit_price * rate, 2),
-                "total_price": total_price,
-                "currency_code": code,
-                "currency_symbol": symbol
+                "unit_price_after_discount": unit_price,
+                "total_price": total_price
             })
             
         except Property.DoesNotExist:
