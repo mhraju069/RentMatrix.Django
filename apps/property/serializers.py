@@ -34,14 +34,46 @@ class PropertyListSerializer(serializers.ModelSerializer):
     size = serializers.CharField(source='area')
     status = serializers.SerializerMethodField()
     distance = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
+    currency_symbol = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
         fields = [
             'id', 'name', 'price', 'price_daily', 'price_monthly', 'bathroom', 'bedroom', 'size', 
             'type', 'status', 'sea_view', 'cover', 'average_rating', 'address', 
-            'views', 'favourite', 'discount', 'distance'
+            'views', 'favourite', 'discount', 'distance', 'currency_code', 'currency_symbol'
         ]
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        from apps.currency_and_language.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return code
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_currency_symbol(self, obj):
+        request = self.context.get('request')
+        from apps.currency_and_language.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return symbol
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        from apps.currency_and_language.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        
+        # Convert prices
+        if ret.get('price') is not None:
+            ret['price'] = round(float(ret['price']) * rate, 2)
+        if ret.get('price_daily') is not None:
+            ret['price_daily'] = round(float(ret['price_daily']) * rate, 2)
+        if ret.get('price_monthly') is not None:
+            ret['price_monthly'] = round(float(ret['price_monthly']) * rate, 2)
+            
+        return ret
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_cover(self, obj):
@@ -159,6 +191,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     size = serializers.CharField(source='area')
     distance = serializers.SerializerMethodField()
     rating_breakdown = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
+    currency_symbol = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
@@ -167,8 +201,57 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'type', 'status', 'verified', 'sea_view', 'review_count', 'cover',
             'average_rating', 'address', 'latitude', 'longitude', 'distance', 'rating_breakdown',
             'weekend_dates', 'vacations', 'other_charges',
-            'gallery', 'add_ons_prices', 'amenities', 'activities', 'reviews', 'views', 'favourite', 'discount'
+            'gallery', 'add_ons_prices', 'amenities', 'activities', 'reviews', 'views', 'favourite', 'discount',
+            'currency_code', 'currency_symbol'
         ]
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        from apps.currency_and_language.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return code
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_currency_symbol(self, obj):
+        request = self.context.get('request')
+        from apps.currency_and_language.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return symbol
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        from apps.currency_and_language.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        
+        # Convert base prices
+        if ret.get('price_daily') is not None:
+            ret['price_daily'] = round(float(ret['price_daily']) * rate, 2)
+        if ret.get('price_monthly') is not None:
+            ret['price_monthly'] = round(float(ret['price_monthly']) * rate, 2)
+            
+        # Convert weekend_dates price
+        if ret.get('weekend_dates') and 'price' in ret['weekend_dates'] and ret['weekend_dates']['price'] is not None:
+            ret['weekend_dates']['price'] = round(float(ret['weekend_dates']['price']) * rate, 2)
+            
+        # Convert vacations price
+        if ret.get('vacations') and 'price' in ret['vacations'] and ret['vacations']['price'] is not None:
+            ret['vacations']['price'] = round(float(ret['vacations']['price']) * rate, 2)
+            
+        # Convert other_charges prices
+        if ret.get('other_charges'):
+            for charge in ret['other_charges']:
+                if charge.get('price') is not None:
+                    charge['price'] = round(float(charge['price']) * rate, 2)
+                    
+        # Convert add_ons_prices prices
+        if ret.get('add_ons_prices'):
+            for addon in ret['add_ons_prices']:
+                if addon.get('price') is not None:
+                    addon['price'] = round(float(addon['price']) * rate, 2)
+                    
+        return ret
 
     @extend_schema_field(OpenApiTypes.FLOAT)
     def get_distance(self, obj):

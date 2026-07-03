@@ -484,4 +484,38 @@ class PropertyDRFTests(APITestCase):
         self.assertEqual(response_fav.status_code, status.HTTP_200_OK)
         self.assertTrue(response_fav.data["favourite"])
 
+    def test_top_performing_properties(self):
+        p1 = Property.objects.create(
+            owner=self.user, name="Low Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=5
+        )
+        p2 = Property.objects.create(
+            owner=self.user, name="High Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=100
+        )
+        p3 = Property.objects.create(
+            owner=self.user, name="Medium Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=50
+        )
+
+        url = "/property/api/v1/guest/top-performing/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["count"], 3)
+        self.assertIsNone(response.data["previous"])
+        self.assertIsNone(response.data["next"])
+        
+        names = [item["name"] for item in response.data["data"]]
+        self.assertEqual(names[0], "High Performing")
+        self.assertEqual(names[1], "Medium Performing")
+        self.assertEqual(names[2], "Low Performing")
+
+        # Test page size pagination
+        response_paged = self.client.get(f"{url}?page_size=2")
+        self.assertEqual(response_paged.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_paged.data["count"], 3)
+        self.assertIsNotNone(response_paged.data["next"])
+        self.assertEqual(len(response_paged.data["data"]), 2)
+        self.assertEqual(response_paged.data["data"][0]["name"], "High Performing")
+        self.assertEqual(response_paged.data["data"][1]["name"], "Medium Performing")
+
+
 
