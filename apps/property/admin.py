@@ -1,6 +1,6 @@
 from .models import *
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 
 
 @admin.register(Property)
@@ -43,3 +43,23 @@ class ReportsAdmin(ModelAdmin):
     search_fields = ('user', 'property', 'reason', 'description')
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
+
+
+
+class PlaceImageInline(TabularInline):
+    model = PlaceImage
+    extra = 1
+
+
+@admin.register(VisitedPlaces)
+class VisitedPlacesAdmin(ModelAdmin):
+    list_display = ('name', 'address', 'latitude', 'longitude')
+    search_fields = ('name', 'address')
+    inlines = [PlaceImageInline]
+
+
+@admin.register(PlaceImage)
+class PlaceImageAdmin(ModelAdmin):
+    list_display = ('place', 'image')
+    list_filter = ('place',)
+    search_fields = ('place__name',)

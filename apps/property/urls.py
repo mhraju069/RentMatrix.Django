@@ -12,6 +12,7 @@ urlpatterns = [
     path('guest/recommended/', RecommendedPropertiesView.as_view(), name='guest-recommended-properties'),
     path('guest/popular-nearby/', PopularNearbyPropertiesView.as_view(), name='guest-popular-nearby-properties'),
     path('guest/top-performing/', TopPerformingView.as_view(), name='guest-top-performing-properties'),
+    path('guest/visited-places/', VisitedPlacesView.as_view(), name='guest-visited-places'),
     
     # Owner Endpoints
     path('owner/property/', PropertyOwnerViewSet.as_view({'get': 'list'}), name='owner-property-list'),

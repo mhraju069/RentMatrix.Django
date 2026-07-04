@@ -517,5 +517,21 @@ class PropertyDRFTests(APITestCase):
         self.assertEqual(response_paged.data["data"][0]["name"], "High Performing")
         self.assertEqual(response_paged.data["data"][1]["name"], "Medium Performing")
 
+    def test_visited_places_list(self):
+        from apps.property.models import VisitedPlaces, PlaceImage
+        place = VisitedPlaces.objects.create(
+            name="Paris", address="France", latitude=48.8566, longitude=2.3522
+        )
+        PlaceImage.objects.create(place=place, image="place_images/paris.jpg")
+
+        url = "/property/api/v1/guest/visited-places/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(len(response.data["data"]), 1)
+        self.assertEqual(response.data["data"][0]["name"], "Paris")
+        self.assertEqual(len(response.data["data"][0]["images"]), 1)
+        self.assertIn("/media/place_images/paris.jpg", response.data["data"][0]["images"][0]["image"])
+
 
 

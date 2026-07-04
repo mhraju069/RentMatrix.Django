@@ -361,3 +361,20 @@ class ReportsSerializer(serializers.ModelSerializer):
         
 
     
+class VisitedPlacesSerializer(serializers.ModelSerializer):
+    images = serializers.SerializerMethodField()
+    class Meta:
+        model = VisitedPlaces
+        fields = ["id", "name", "address", "latitude", "longitude", "images"]
+
+    def get_images(self, obj):
+        res = []
+        request = self.context.get('request')
+        for i in obj.images.all():
+            if i.image:
+                url = i.image.url
+                if request:
+                    url = request.build_absolute_uri(url)
+                res.append({"image": url})
+        return res
+    

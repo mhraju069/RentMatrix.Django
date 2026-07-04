@@ -206,3 +206,22 @@ class Reports(models.Model):
         verbose_name_plural = "Reports"
 
     
+
+
+class VisitedPlaces(models.Model):
+    name = models.CharField(max_length=255)
+    address = models.TextField(null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)])
+    longitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)])
+
+    def __str__(self):
+        return self.name
+    
+
+class PlaceImage(models.Model):
+    place = models.ForeignKey(VisitedPlaces, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='place_images/')
+
+    def __str__(self):
+        return f"{self.place.name} - {self.image}"
+    

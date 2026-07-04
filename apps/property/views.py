@@ -13,7 +13,7 @@ import uuid
 from apps.auth.utils import format_serializer_errors
 from .models import Property, Favourites
 from .serializers import (
-    PropertyDetailSerializer, PropertyListSerializer, PropertySerializer, GallerySerializer, ReportsSerializer
+    PropertyDetailSerializer, PropertyListSerializer, PropertySerializer, GallerySerializer, ReportsSerializer, VisitedPlacesSerializer
 )   
 from apps.booking.models import Booking
 
@@ -973,3 +973,24 @@ class TopPerformingView(views.APIView):
             "message": "Top performing properties fetched successfully",
             "data": serializer.data
         })
+
+
+
+class VisitedPlacesView(views.APIView):
+    serializer_class = VisitedPlacesSerializer
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={200: dict}
+    )
+    def get(self, request):
+        places = VisitedPlaces.objects.all()
+        serializer = self.serializer_class(places, many=True, context={'request': request})
+        return Response({
+            "status": 200,
+            "success": True,
+            "message": "Visited places fetched successfully",
+            "data": serializer.data
+        })
+    
+    
