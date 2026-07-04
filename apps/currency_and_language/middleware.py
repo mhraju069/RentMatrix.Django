@@ -31,9 +31,9 @@ class ResponseTranslationMiddleware:
             if msg and isinstance(msg, str):
                 response.data['message'] = translate_message(msg, lang)
                 
-                # Re-render to update the response content (since DRF Response renders to string lazily or already did)
+                # Re-render to update the response content
                 if hasattr(response, 'render') and callable(response.render):
-                    response.content = None
+                    response._is_rendered = False
                     try:
                         response.render()
                     except Exception:

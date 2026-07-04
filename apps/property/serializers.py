@@ -369,12 +369,8 @@ class VisitedPlacesSerializer(serializers.ModelSerializer):
 
     def get_images(self, obj):
         res = []
-        request = self.context.get('request')
         for i in obj.images.all():
             if i.image:
-                url = i.image.url
-                if request:
-                    url = request.build_absolute_uri(url)
-                res.append({"image": url})
+                res.append({"image": settings.BACKEND_URI + i.image.url})
         return res
     
