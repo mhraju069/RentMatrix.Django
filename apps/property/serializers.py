@@ -127,16 +127,26 @@ class PropertyListSerializer(serializers.ModelSerializer):
 
 
 class GallerySerializer(serializers.ModelSerializer):
-    file = serializers.SerializerMethodField()
+    file = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
         model = Gallery
-        fields = ["id","type", "file"]
+        fields = ["id", "type", "file"]
 
-    def get_file(self, obj):
-        if obj.file:
-            return obj.file.url
-        return ""
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.file:
+            url = instance.file.url
+            request = self.context.get('request')
+            if request:
+                ret['file'] = request.build_absolute_uri(url)
+            elif hasattr(settings, 'BACKEND_URI') and settings.BACKEND_URI:
+                ret['file'] = settings.BACKEND_URI + url
+            else:
+                ret['file'] = url
+        else:
+            ret['file'] = ""
+        return ret
 
 
 

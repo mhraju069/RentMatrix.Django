@@ -900,8 +900,15 @@ class UpdateGallery(views.APIView):
 
     @extend_schema(request=GallerySerializer, responses={200: dict})
     def patch(self, request, media_id):
-        Gallery.objects.filter(id=media_id).update(file=request.FILES.get("file"))
-        return Response({"status": 200, "success": True, "message": "Gallery updated successfully"})
+        try:
+            gallery_obj = Gallery.objects.get(id=media_id)
+            file_obj = request.FILES.get("file")
+            if file_obj:
+                gallery_obj.file = file_obj
+                gallery_obj.save()
+            return Response({"status": 200, "success": True, "message": "Gallery updated successfully"})
+        except Gallery.DoesNotExist:
+            return Response({"status": 404, "success": False, "message": "Gallery not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 
