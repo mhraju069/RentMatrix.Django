@@ -6,10 +6,12 @@ from drf_spectacular.types import OpenApiTypes
 
 class UserDataSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'name', 'phone', 'image']
+        fields = ['id', 'email', 'role', 'name', 'phone', 'image', 'currency', 'language']
         read_only_fields = ('id',)
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -18,6 +20,26 @@ class UserDataSerializer(serializers.ModelSerializer):
             return obj.image.url
         return None
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_currency(self, obj):
+        try:
+            if hasattr(obj, 'preference') and obj.preference and obj.preference.currency:
+                from apps.currency_and_language.serializers import CurrencySerializer
+                return CurrencySerializer(obj.preference.currency).data
+        except Exception:
+            pass
+        return None
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_language(self, obj):
+        try:
+            if hasattr(obj, 'preference') and obj.preference and obj.preference.language:
+                from apps.currency_and_language.serializers import LanguageSerializer
+                return LanguageSerializer(obj.preference.language).data
+        except Exception:
+            pass
+        return None
+        
 class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
