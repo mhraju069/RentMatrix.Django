@@ -293,6 +293,23 @@ class ConfirmBookingView(views.APIView):
         return Response({"status": 200, "success": True, "message": "Booking confirmed successfully, and guest documents auto-approved"})
 
 
+class DeclineBookingView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(request=None, responses={200: dict})
+    def patch(self, request, booking_id):
+        booking = Booking.objects.filter(id=booking_id, property__owner=request.user).first()
+        if not booking:
+            return Response({"status": 404, "success": False, "message": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        if booking.status == "DECLINED":
+            return Response({"status": 400, "success": False, "message": "Booking already declined"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        booking.status = "DECLINED"
+        booking.save()
+        return Response({"status": 200, "success": True, "message": "Booking declined successfully"})
+
+
 
 class OwnerBookingViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]

@@ -11,6 +11,7 @@ STATUS_CHOICES = [
     ('CHECKED_IN', 'Checked In'),
     ('CHECKED_OUT', 'Checked Out'),
     ('CANCELLED', 'Cancelled'),
+    ('DECLINED', 'Declined'),
 ]
 
 

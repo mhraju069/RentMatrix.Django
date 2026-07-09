@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GuestBookingViewSet, CancelBookingView, OwnerBookingViewSet, CalculateBookingPriceView, ConfirmBookingView
+from .views import GuestBookingViewSet, CancelBookingView, OwnerBookingViewSet, CalculateBookingPriceView, ConfirmBookingView, DeclineBookingView
 
 urlpatterns = [
     # Guest Endpoints
@@ -12,4 +12,5 @@ urlpatterns = [
     path('owner/booking/', OwnerBookingViewSet.as_view({'get': 'list'}), name='owner-booking-list'),
     path('owner/booking/<uuid:pk>/', OwnerBookingViewSet.as_view({'get': 'retrieve'}), name='owner-booking-detail'),
     path('owner/booking/confirm/<uuid:booking_id>/', ConfirmBookingView.as_view(), name='confirm-booking'),
+    path('owner/booking/decline/<uuid:booking_id>/', DeclineBookingView.as_view(), name='decline-booking'),
 ]

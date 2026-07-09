@@ -129,3 +129,13 @@ class OwnerBookingTests(APITestCase):
 
         doc.refresh_from_db()
         self.assertTrue(doc.is_verified)
+
+    def test_owner_decline_booking(self):
+        self.client.force_authenticate(user=self.owner)
+
+        url_decline = f"/booking/api/v1/owner/booking/decline/{self.booking.id}/"
+        response = self.client.patch(url_decline)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, "DECLINED")

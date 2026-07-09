@@ -540,7 +540,7 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
         from decimal import Decimal
         return properties.annotate(
             avg_rating=Coalesce(Avg('reviews__rating'), Value(Decimal('0.0')), output_field=DecimalField()),
-            booking_count=Count('booking', filter=~Q(booking__status='CANCELLED'))
+            booking_count=Count('booking', filter=~Q(booking__status__in=['CANCELLED', 'DECLINED']))
         ).order_by('-booking_count', '-avg_rating')
 
     @extend_schema(
@@ -589,7 +589,7 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
             occupancy_rate = 0.0
             
         # 2. Total Bookings (non-cancelled)
-        total_bookings = Booking.objects.filter(property__owner=request.user).exclude(status='CANCELLED').count()
+        total_bookings = Booking.objects.filter(property__owner=request.user).exclude(status__in=['CANCELLED', 'DECLINED']).count()
         
         # 3. Pending Requests
         pending_requests = Booking.objects.filter(property__owner=request.user, status='PENDING').count()
@@ -640,7 +640,7 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
             
         serializer = PropertyDetailSerializer(prop, context={'request': request})
         bookings = Booking.objects.filter(property=prop)
-        total_bookings = bookings.exclude(status='CANCELLED').count()
+        total_bookings = bookings.exclude(status__in=['CANCELLED', 'DECLINED']).count()
         
         # Calculate occupancy rate for this property over the last 30 days
         from datetime import date, timedelta
@@ -664,7 +664,7 @@ class PropertyOwnerViewSet(viewsets.ModelViewSet):
         occupancy_rate = (total_booked_days / 30.0) * 100
         
         # Avg stay
-        non_cancelled_bookings = bookings.exclude(status='CANCELLED')
+        non_cancelled_bookings = bookings.exclude(status__in=['CANCELLED', 'DECLINED'])
         nc_count = non_cancelled_bookings.count()
         if nc_count > 0:
             avg_stay = sum((b.check_out - b.check_in).days for b in non_cancelled_bookings) / nc_count
