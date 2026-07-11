@@ -97,6 +97,10 @@ class OTP(models.Model):
     otp = models.CharField(max_length=6,verbose_name="OTP Code")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = 'OTP'
+        verbose_name_plural = 'OTPs'
+
     def __str__(self):
         return f"OTP for: {self.user}."
 
@@ -113,6 +117,10 @@ class Document(models.Model):
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Document'
+        verbose_name_plural = 'Documents'
 
     def __str__(self):
         return f"{self.user} - {self.document_type}"    

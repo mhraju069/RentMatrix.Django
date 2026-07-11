@@ -54,6 +54,10 @@ class Property(models.Model):
     def price(self, value):
         self.price_daily = value
 
+    class Meta:
+        verbose_name = 'Property'
+        verbose_name_plural = 'Properties'
+
     def __str__(self):
         return self.name
 
@@ -74,6 +78,10 @@ class Weekend(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Weekend'
+        verbose_name_plural = 'Weekends'
 
     def __str__(self):
         return self.property.name + " - " + str(self.weekend)
@@ -102,6 +110,10 @@ class Vacetions(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = 'Vacation'
+        verbose_name_plural = 'Vacations'
+
     def __str__(self):
         return self.property.name + " - " + str(self.month)
 
@@ -111,6 +123,10 @@ class OtherCharges(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='other_charges')
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Other Charge'
+        verbose_name_plural = 'Other Charges'
 
     def __str__(self):
         return self.property.name + " - " + self.name + " : " + str(self.price)
@@ -122,6 +138,10 @@ class AddOnsPrice(models.Model):
     service = models.CharField(max_length=255)
     price = models.IntegerField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = 'Add-on Price'
+        verbose_name_plural = 'Add-on Prices'
+
     def __str__(self):
         return self.property.name + " - " + self.service + " : " + str(self.price)
 
@@ -129,6 +149,10 @@ class AddOnsPrice(models.Model):
 class Amenity(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='amenities')
     name = models.CharField(max_length=255)
+
+    class Meta:
+        verbose_name = 'Amenity'
+        verbose_name_plural = 'Amenities'
 
     def __str__(self):
         return self.name
@@ -138,6 +162,10 @@ class Activity(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='activities')
     name = models.CharField(max_length=255)
     details = models.TextField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Activity'
+        verbose_name_plural = 'Activities'
 
     def __str__(self):
         return self.name
@@ -152,6 +180,10 @@ class Gallery(models.Model):
     type = models.CharField(max_length=255, choices=TYPE, default="IMAGE")
     file = models.FileField(upload_to='property_gallery/')
 
+    class Meta:
+        verbose_name = 'Gallery'
+        verbose_name_plural = 'Galleries'
+
     def __str__(self):
         return f"{self.property.name} - {self.type}"
 
@@ -165,6 +197,10 @@ class Review(models.Model):
     review = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Review'
+        verbose_name_plural = 'Reviews'
 
     def __str__(self):
         return f"{self.property.name} - {self.user.username}"
@@ -183,7 +219,8 @@ class Favourites(models.Model):
     
     class Meta:
         unique_together = ('user', 'property')
-        verbose_name_plural = "Favourites"
+        verbose_name = 'Favourite'
+        verbose_name_plural = 'Favourites'
 
 
 
@@ -203,7 +240,8 @@ class Reports(models.Model):
         return f"Report for {self.property.name} by {self.user.username}"
 
     class Meta:
-        verbose_name_plural = "Reports"
+        verbose_name = 'Report'
+        verbose_name_plural = 'Reports'
 
     
 
@@ -214,6 +252,10 @@ class VisitedPlaces(models.Model):
     latitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-90), MaxValueValidator(90)])
     longitude = models.FloatField(null=True, blank=True, validators=[MinValueValidator(-180), MaxValueValidator(180)])
 
+    class Meta:
+        verbose_name = 'Visited Place'
+        verbose_name_plural = 'Visited Places'
+
     def __str__(self):
         return self.name
     
@@ -221,6 +263,10 @@ class VisitedPlaces(models.Model):
 class PlaceImage(models.Model):
     place = models.ForeignKey(VisitedPlaces, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='place_images/')
+
+    class Meta:
+        verbose_name = 'Place Image'
+        verbose_name_plural = 'Place Images'
 
     def __str__(self):
         return f"{self.place.name} - {self.image}"

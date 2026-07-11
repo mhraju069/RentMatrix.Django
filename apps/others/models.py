@@ -8,6 +8,10 @@ class Language(models.Model):
     code = models.CharField(max_length=10, unique=True)
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        verbose_name = 'Language'
+        verbose_name_plural = 'Languages'
+
     def __str__(self):
         return self.name
 
@@ -19,6 +23,10 @@ class Currency(models.Model):
     exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1.0000)
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        verbose_name = 'Currency'
+        verbose_name_plural = 'Currencies'
+
     def __str__(self):
         return self.code
 
@@ -27,6 +35,10 @@ class UserPreference(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='preference')
     language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True)
     currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'User Preference'
+        verbose_name_plural = 'User Preferences'
 
     def __str__(self):
         lang_code = self.language.code if self.language else 'None'

@@ -32,6 +32,10 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = 'Booking'
+        verbose_name_plural = 'Bookings'
+
     def __str__(self):
         return f"Booking for {self.property.name} by {self.user.username}"
 

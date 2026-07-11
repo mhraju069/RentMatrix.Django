@@ -9,6 +9,10 @@ class NotifySettings(models.Model):
     booking = models.BooleanField(default=True)
     checkin = models.BooleanField(default=True)
 
+    class Meta:
+        verbose_name = 'Notify Settings'
+        verbose_name_plural = 'Notify Settings'
+
     def __str__(self):
         return f"{self.user.email} - {self.booking} - {self.checkin}"
     
@@ -20,6 +24,10 @@ class DeviceToken(models.Model):
     token = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Device Token'
+        verbose_name_plural = 'Device Tokens'
 
     def __str__(self):
         return f"{self.user.email} - {self.token}"
@@ -35,6 +43,10 @@ class Notification(models.Model):
     related_id = models.CharField(max_length=255, blank=True, null=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
 
     def __str__(self):
         return f"{self.user.email} - {self.title}"
