@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.currency_and_language.models import Language, Currency, UserPreference
+from apps.others.models import Language, Currency, UserPreference
 
 class LanguageSerializer(serializers.ModelSerializer):
     class Meta:

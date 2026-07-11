@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from drf_spectacular.utils import extend_schema
 
-from apps.currency_and_language.models import Language, Currency, UserPreference
-from apps.currency_and_language.serializers import LanguageSerializer, CurrencySerializer, UserPreferenceSerializer
+from apps.others.models import Language, Currency, UserPreference
+from apps.others.serializers import LanguageSerializer, CurrencySerializer, UserPreferenceSerializer
 from apps.auth.utils import format_serializer_errors
 
 class LanguageViewSet(viewsets.ReadOnlyModelViewSet):

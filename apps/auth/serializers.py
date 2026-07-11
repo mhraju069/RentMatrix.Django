@@ -24,7 +24,7 @@ class UserDataSerializer(serializers.ModelSerializer):
     def get_currency(self, obj):
         try:
             if hasattr(obj, 'preference') and obj.preference and obj.preference.currency:
-                from apps.currency_and_language.serializers import CurrencySerializer
+                from apps.others.serializers import CurrencySerializer
                 return CurrencySerializer(obj.preference.currency).data
         except Exception:
             pass
@@ -34,7 +34,7 @@ class UserDataSerializer(serializers.ModelSerializer):
     def get_language(self, obj):
         try:
             if hasattr(obj, 'preference') and obj.preference and obj.preference.language:
-                from apps.currency_and_language.serializers import LanguageSerializer
+                from apps.others.serializers import LanguageSerializer
                 return LanguageSerializer(obj.preference.language).data
         except Exception:
             pass

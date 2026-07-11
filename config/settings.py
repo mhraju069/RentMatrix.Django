@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "apps.property",
     "apps.booking",
     "apps.notify",
-    "apps.currency_and_language",
+    "apps.others",
 ]
 
 AUTH_USER_MODEL = 'authentications.User'
@@ -57,7 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.currency_and_language.middleware.ResponseTranslationMiddleware',
+    'apps.others.middleware.ResponseTranslationMiddleware',
 ]
 
 ROOT_URLCONF = 'config.api'

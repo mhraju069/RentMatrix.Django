@@ -1,6 +1,6 @@
 from rest_framework.response import Response
-from apps.currency_and_language.models import UserPreference
-from apps.currency_and_language.translation import translate_message
+from apps.others.models import UserPreference
+from apps.others.translation import translate_message
 
 class ResponseTranslationMiddleware:
     def __init__(self, get_response):

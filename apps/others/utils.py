@@ -1,7 +1,7 @@
 import urllib.request
 import json
 from decimal import Decimal
-from apps.currency_and_language.models import Currency, UserPreference
+from apps.others.models import Currency, UserPreference
 
 def get_user_currency_and_rate(request):
     if request and request.user and request.user.is_authenticated:

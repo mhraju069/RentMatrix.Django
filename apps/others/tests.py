@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from apps.currency_and_language.models import Language, Currency, UserPreference
+from apps.others.models import Language, Currency, UserPreference
 
 User = get_user_model()
 
@@ -16,7 +16,7 @@ class CurrencyAndLanguageTests(APITestCase):
         self.client.force_authenticate(user=self.user)
 
     def test_languages_list(self):
-        url = "/currency-and-language/api/v1/languages/"
+        url = "/others/api/v1/languages/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
@@ -25,7 +25,7 @@ class CurrencyAndLanguageTests(APITestCase):
         self.assertIn("ar", codes)
 
     def test_currencies_list(self):
-        url = "/currency-and-language/api/v1/currencies/"
+        url = "/others/api/v1/currencies/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
@@ -35,7 +35,7 @@ class CurrencyAndLanguageTests(APITestCase):
         self.assertIn("EGP", codes)
 
     def test_get_and_update_preferences(self):
-        url = "/currency-and-language/api/v1/preferences/"
+        url = "/others/api/v1/preferences/"
         
         # 1. GET preferences (should auto-create with default English and USD)
         response_get = self.client.get(url)
@@ -63,13 +63,13 @@ class CurrencyAndLanguageTests(APITestCase):
 
     def test_response_translation_based_on_user_preference(self):
         # 1. User preferences originally set to English (default)
-        url_lang = "/currency-and-language/api/v1/languages/"
+        url_lang = "/others/api/v1/languages/"
         response_en = self.client.get(url_lang)
         self.assertEqual(response_en.status_code, status.HTTP_200_OK)
         self.assertEqual(response_en.data["message"], "Languages fetched successfully")
 
         # 2. Update language preference to Arabic
-        url_pref = "/currency-and-language/api/v1/preferences/"
+        url_pref = "/others/api/v1/preferences/"
         lang_ar = Language.objects.get(code="ar")
         pref, _ = UserPreference.objects.get_or_create(user=self.user)
         pref.language = lang_ar
@@ -82,7 +82,7 @@ class CurrencyAndLanguageTests(APITestCase):
 
     def test_response_translation_based_on_accept_language_header(self):
         self.client.logout()  # Unauthenticated request
-        url_lang = "/currency-and-language/api/v1/languages/"
+        url_lang = "/others/api/v1/languages/"
         
         # Request with Arabic Accept-Language header
         response = self.client.get(url_lang, HTTP_ACCEPT_LANGUAGE="ar")
@@ -123,5 +123,3 @@ class CurrencyAndLanguageTests(APITestCase):
         self.assertEqual(response_aed.data["price_monthly"], 9175.00)
         self.assertEqual(response_aed.data["currency_code"], "AED")
         self.assertEqual(response_aed.data["currency_symbol"], "د.إ")
-
-

@@ -48,21 +48,21 @@ class PropertyListSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency_code(self, obj):
         request = self.context.get('request')
-        from apps.currency_and_language.utils import get_user_currency_and_rate
+        from apps.others.utils import get_user_currency_and_rate
         code, symbol, rate = get_user_currency_and_rate(request)
         return code
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency_symbol(self, obj):
         request = self.context.get('request')
-        from apps.currency_and_language.utils import get_user_currency_and_rate
+        from apps.others.utils import get_user_currency_and_rate
         code, symbol, rate = get_user_currency_and_rate(request)
         return symbol
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
-        from apps.currency_and_language.utils import get_user_currency_and_rate
+        from apps.others.utils import get_user_currency_and_rate
         code, symbol, rate = get_user_currency_and_rate(request)
         
         # Convert prices
@@ -218,21 +218,21 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency_code(self, obj):
         request = self.context.get('request')
-        from apps.currency_and_language.utils import get_user_currency_and_rate
+        from apps.others.utils import get_user_currency_and_rate
         code, symbol, rate = get_user_currency_and_rate(request)
         return code
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency_symbol(self, obj):
         request = self.context.get('request')
-        from apps.currency_and_language.utils import get_user_currency_and_rate
+        from apps.others.utils import get_user_currency_and_rate
         code, symbol, rate = get_user_currency_and_rate(request)
         return symbol
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
-        from apps.currency_and_language.utils import get_user_currency_and_rate
+        from apps.others.utils import get_user_currency_and_rate
         code, symbol, rate = get_user_currency_and_rate(request)
         
         # Convert base prices

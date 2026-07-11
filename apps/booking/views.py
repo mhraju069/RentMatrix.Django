@@ -69,7 +69,7 @@ class CalculateBookingPriceView(views.APIView):
                 except ValueError:
                     pass
                  
-            from apps.currency_and_language.utils import get_user_currency_and_rate
+            from apps.others.utils import get_user_currency_and_rate
             code, symbol, rate = get_user_currency_and_rate(request)
 
             total_price = round(unit_price * total_duration * rate, 2)
