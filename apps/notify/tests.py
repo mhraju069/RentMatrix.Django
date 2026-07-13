@@ -137,3 +137,45 @@ class NotificationTests(APITestCase):
         self.assertIsNotNone(guest_notif)
         self.assertIn("Guest", owner_notif.body)
         self.assertIn("Your check-in", guest_notif.body)
+
+    def test_announcement_sending(self):
+        from apps.notify.models import Announcement
+        
+        # Activate users for the test since they default to is_active=False
+        self.owner.is_active = True
+        self.owner.role = 'owner'
+        self.owner.save()
+        self.guest.is_active = True
+        self.guest.role = 'guest'
+        self.guest.save()
+        
+        # Create an announcement for GUESTS only
+        a1 = Announcement.objects.create(
+            title="Important Guest Announcement",
+            body="Maintenance work today.",
+            user_group="GUESTS"
+        )
+        
+        # Verify guest received it, but owner did not
+        guest_notif = Notification.objects.filter(user=self.guest, notification_type="announcement").first()
+        owner_notif = Notification.objects.filter(user=self.owner, notification_type="announcement").first()
+        self.assertIsNotNone(guest_notif)
+        self.assertIsNone(owner_notif)
+        self.assertEqual(guest_notif.title, "Important Guest Announcement")
+        
+        # Verify announcement is marked as sent
+        a1.refresh_from_db()
+        self.assertTrue(a1.sent)
+        
+        # Create an announcement for ALL users
+        a2 = Announcement.objects.create(
+            title="Global Announcement",
+            body="System update tonight.",
+            user_group="ALL"
+        )
+        
+        # Verify both owner and guest received it
+        guest_global = Notification.objects.filter(user=self.guest, title="Global Announcement").first()
+        owner_global = Notification.objects.filter(user=self.owner, title="Global Announcement").first()
+        self.assertIsNotNone(guest_global)
+        self.assertIsNotNone(owner_global)
