@@ -18,6 +18,7 @@ from .serializers import (
 from apps.booking.models import Booking
 
 def apply_property_filters(properties, query_params):
+    properties = properties.filter(verified=True)
     search = query_params.get('search')
     if search:
         properties = properties.filter(Q(name__icontains=search) | Q(address__icontains=search))
@@ -181,7 +182,7 @@ class PropertyGuestViewSet(viewsets.ReadOnlyModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         property_id = kwargs.get('pk')
         prop = Property.objects.select_related('owner').filter(id=property_id).first()
-        if not prop:
+        if not prop or (not prop.verified and prop.owner != request.user):
             return Response({"status": 404, "success": False, "message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
         
         Property.objects.filter(id=property_id).update(views=F('views') + 1)
@@ -963,7 +964,7 @@ class TopPerformingView(views.APIView):
     )
     def get(self, request):
         from django.db.models import Avg
-        properties = Property.objects.filter(status="AVAILABLE").annotate(
+        properties = Property.objects.filter(status="AVAILABLE", verified=True).annotate(
             avg_rating=Avg('reviews__rating')
         ).order_by('-views')
         

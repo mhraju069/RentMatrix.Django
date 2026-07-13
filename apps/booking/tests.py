@@ -19,7 +19,8 @@ class OwnerBookingTests(APITestCase):
             address="123 Ocean Drive",
             bedroom=2,
             bathroom=2,
-            price_daily=100.00
+            price_daily=100.00,
+            verified=True
         )
 
         self.booking = Booking.objects.create(

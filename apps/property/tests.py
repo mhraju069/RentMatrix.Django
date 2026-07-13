@@ -89,7 +89,8 @@ class PropertyDRFTests(APITestCase):
             address="Initial Address",
             bedroom=1,
             bathroom=1,
-            price_daily=100.00
+            price_daily=100.00,
+            verified=True
         )
 
         data = {
@@ -133,7 +134,8 @@ class PropertyDRFTests(APITestCase):
             address="Some Address",
             bedroom=1,
             bathroom=1,
-            price_daily=100.00
+            price_daily=100.00,
+            verified=True
         )
 
         # 1. Test POST report
@@ -166,7 +168,8 @@ class PropertyDRFTests(APITestCase):
             address="Dhaka",
             bedroom=2,
             bathroom=2,
-            price_daily=150.00
+            price_daily=150.00,
+            verified=True
         )
         p2 = Property.objects.create(
             owner=self.user,
@@ -174,7 +177,8 @@ class PropertyDRFTests(APITestCase):
             address="Chittagong",
             bedroom=3,
             bathroom=3,
-            price_daily=250.00
+            price_daily=250.00,
+            verified=True
         )
         
         # Create bookings for p1 (top performer: 2 bookings)
@@ -292,10 +296,10 @@ class PropertyDRFTests(APITestCase):
         from datetime import date, timedelta
         # Setup properties
         p1 = Property.objects.create(
-            owner=self.user, name="Booked Property", address="Addr 1", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE"
+            owner=self.user, name="Booked Property", address="Addr 1", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", verified=True
         )
         p2 = Property.objects.create(
-            owner=self.user, name="Available Property", address="Addr 2", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE"
+            owner=self.user, name="Available Property", address="Addr 2", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", verified=True
         )
 
         # Book p1 from today to today + 3 days
@@ -335,11 +339,11 @@ class PropertyDRFTests(APITestCase):
     def test_guest_property_proximity_location_filtering(self):
         p_far = Property.objects.create(
             owner=self.user, name="Far Property", address="NYC", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE",
-            latitude=45.0000, longitude=-75.0000
+            latitude=45.0000, longitude=-75.0000, verified=True
         )
         p_close = Property.objects.create(
             owner=self.user, name="Close Property", address="Hoboken", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE",
-            latitude=40.7200, longitude=-74.0100
+            latitude=40.7200, longitude=-74.0100, verified=True
         )
 
         url = "/property/api/v1/guest/property/?latitude=40.7201&longitude=-74.0101"
@@ -364,11 +368,11 @@ class PropertyDRFTests(APITestCase):
     def test_guest_property_home_dashboard_and_detail_fields(self):
         p_far = Property.objects.create(
             owner=self.user, name="NYC far Property", address="NYC", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE",
-            latitude=45.0000, longitude=-75.0000, views=10
+            latitude=45.0000, longitude=-75.0000, views=10, verified=True
         )
         p_close = Property.objects.create(
             owner=self.user, name="Hoboken close Property", address="Hoboken", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE",
-            latitude=40.7200, longitude=-74.0100, views=2
+            latitude=40.7200, longitude=-74.0100, views=2, verified=True
         )
 
         url = "/property/api/v1/guest/home/"
@@ -412,11 +416,11 @@ class PropertyDRFTests(APITestCase):
     def test_guest_property_see_all_listings(self):
         p_far = Property.objects.create(
             owner=self.user, name="NYC far Property", address="NYC", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE",
-            latitude=45.0000, longitude=-75.0000, views=10, type="HOUSE"
+            latitude=45.0000, longitude=-75.0000, views=10, type="HOUSE", verified=True
         )
         p_close = Property.objects.create(
             owner=self.user, name="Hoboken close Property", address="Hoboken", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE",
-            latitude=40.7200, longitude=-74.0100, views=2, type="VILLA"
+            latitude=40.7200, longitude=-74.0100, views=2, type="VILLA", verified=True
         )
 
         url_rec = "/property/api/v1/guest/recommended/"
@@ -438,7 +442,7 @@ class PropertyDRFTests(APITestCase):
 
     def test_property_detail_view_gallery_and_reviews(self):
         prop = Property.objects.create(
-            owner=self.user, name="Detail Test Property", address="Test Addr", bedroom=2, bathroom=2, price_daily=150.00, status="AVAILABLE"
+            owner=self.user, name="Detail Test Property", address="Test Addr", bedroom=2, bathroom=2, price_daily=150.00, status="AVAILABLE", verified=True
         )
         
         from apps.property.models import Gallery, Review
@@ -470,7 +474,7 @@ class PropertyDRFTests(APITestCase):
 
     def test_get_favourite_status_by_property_id(self):
         prop = Property.objects.create(
-            owner=self.user, name="Fav Check Property", address="Test Addr", bedroom=2, bathroom=2, price_daily=150.00, status="AVAILABLE"
+            owner=self.user, name="Fav Check Property", address="Test Addr", bedroom=2, bathroom=2, price_daily=150.00, status="AVAILABLE", verified=True
         )
         url = f"/property/api/v1/guest/favourite/{prop.id}/"
         response = self.client.get(url)
@@ -486,13 +490,13 @@ class PropertyDRFTests(APITestCase):
 
     def test_top_performing_properties(self):
         p1 = Property.objects.create(
-            owner=self.user, name="Low Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=5
+            owner=self.user, name="Low Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=5, verified=True
         )
         p2 = Property.objects.create(
-            owner=self.user, name="High Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=100
+            owner=self.user, name="High Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=100, verified=True
         )
         p3 = Property.objects.create(
-            owner=self.user, name="Medium Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=50
+            owner=self.user, name="Medium Performing", address="Addr", bedroom=1, bathroom=1, price_daily=100.00, status="AVAILABLE", views=50, verified=True
         )
 
         url = "/property/api/v1/guest/top-performing/"

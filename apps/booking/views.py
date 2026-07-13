@@ -42,8 +42,12 @@ class CalculateBookingPriceView(views.APIView):
         selected_addon_ids = [aid.strip() for aid in addons_str.split(",")] if addons_str else []
 
         try:
+            prop = Property.objects.get(id=property_id)
+            if not prop.verified and prop.owner != request.user:
+                return Response({"success": False, "message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
+            
             breakdown = get_final_discount_price_for_booking(
-                property_obj_or_id=property_id, 
+                property_obj_or_id=prop, 
                 price_type=price_type, 
                 selected_addon_ids=selected_addon_ids,
                 start_date=start_date,
@@ -145,7 +149,7 @@ class GuestBookingViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             property_id = request.data.get('property')
             prop = Property.objects.select_related('owner').filter(id=property_id).first()
-            if not prop:
+            if not prop or (not prop.verified and prop.owner != request.user):
                 return Response({"status": 404, "success": False, "message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
                 
             price_type = request.data.get('price_type', 'daily')
