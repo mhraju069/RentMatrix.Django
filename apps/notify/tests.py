@@ -93,3 +93,47 @@ class NotificationTests(APITestCase):
         response_toggle2 = self.client.patch(url, {"toggle": "checkin"}, format="json")
         self.assertEqual(response_toggle2.status_code, status.HTTP_200_OK)
         self.assertTrue(response_toggle2.data["data"]["checkin"])
+
+    def test_owner_booking_updates_notify_guest(self):
+        # Confirm booking as owner
+        self.client.force_authenticate(user=self.owner)
+        confirm_url = f"/booking/api/v1/owner/booking/confirm/{self.booking.id}/"
+        response = self.client.patch(confirm_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Guest should have received an approval notification
+        notif = Notification.objects.filter(user=self.guest, notification_type="booking").first()
+        self.assertIsNotNone(notif)
+        self.assertEqual(notif.title, "Booking Approved")
+
+        # Decline booking as owner
+        self.booking.status = "PENDING"
+        self.booking.save()
+        decline_url = f"/booking/api/v1/owner/booking/decline/{self.booking.id}/"
+        response = self.client.patch(decline_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Guest should have received a decline notification
+        notif_declined = Notification.objects.filter(user=self.guest, notification_type="booking", title="Booking Declined").first()
+        self.assertIsNotNone(notif_declined)
+
+    def test_checkin_checkout_reminders_to_both_users(self):
+        from apps.notify.utils import checkin_reminder
+        import datetime
+        
+        # Setup booking check-in tomorrow
+        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        self.booking.check_in = tomorrow
+        self.booking.status = 'CONFIRMED'
+        self.booking.save()
+
+        # Run checkin_reminder
+        checkin_reminder()
+
+        # Both owner and guest should receive checkin reminder
+        owner_notif = Notification.objects.filter(user=self.owner, notification_type="about to check in").first()
+        guest_notif = Notification.objects.filter(user=self.guest, notification_type="about to check in").first()
+        self.assertIsNotNone(owner_notif)
+        self.assertIsNotNone(guest_notif)
+        self.assertIn("Guest", owner_notif.body)
+        self.assertIn("Your check-in", guest_notif.body)

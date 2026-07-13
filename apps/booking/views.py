@@ -294,6 +294,13 @@ class ConfirmBookingView(views.APIView):
             
         booking.status = "CONFIRMED"
         booking.save()
+        
+        try:
+            from apps.notify.utils import send_booking_status_notification
+            send_booking_status_notification(booking)
+        except Exception as e:
+            print(f"Error calling send_booking_status_notification: {e}")
+            
         return Response({"status": 200, "success": True, "message": "Booking confirmed successfully, and guest documents auto-approved"})
 
 
@@ -311,6 +318,13 @@ class DeclineBookingView(views.APIView):
             
         booking.status = "DECLINED"
         booking.save()
+        
+        try:
+            from apps.notify.utils import send_booking_status_notification
+            send_booking_status_notification(booking)
+        except Exception as e:
+            print(f"Error calling send_booking_status_notification: {e}")
+            
         return Response({"status": 200, "success": True, "message": "Booking declined successfully"})
 
 

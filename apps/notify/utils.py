@@ -32,7 +32,29 @@ def send_notification(token,title,body,data=None):
 
 def checkin_reminder():
     try:
-        pass
+        from django.utils import timezone
+        import datetime
+        from apps.booking.models import Booking
+        
+        today = timezone.now().date()
+        tomorrow = today + datetime.timedelta(days=1)
+        
+        # 1. Reminders for check-ins tomorrow
+        upcoming_checkins = Booking.objects.filter(check_in=tomorrow, status='CONFIRMED')
+        for booking in upcoming_checkins:
+            # Send to owner
+            send_checkin_reminder(booking.property.owner, booking)
+            # Send to guest
+            send_guest_checkin_reminder(booking)
+            
+        # 2. Reminders for check-outs tomorrow
+        upcoming_checkouts = Booking.objects.filter(check_out=tomorrow, status='CHECKED_IN')
+        for booking in upcoming_checkouts:
+            # Send to owner
+            send_checkout_reminder(booking.property.owner, booking)
+            # Send to guest
+            send_guest_checkout_reminder(booking)
+            
     except Exception as e:
         print(f"Error sending checkin reminder: {e}")
 
@@ -100,3 +122,30 @@ def send_review_notification(user, review):
     title = "New Property Review"
     body = f"A new review was submitted for {review.property.name} by {review.user.name or review.user.username}."
     send_user_notification(user, title, body, notification_type="review", related_id=review.id)
+
+
+def send_guest_checkin_reminder(booking):
+    title = "Upcoming Check-In"
+    body = f"Reminder: Your check-in for {booking.property.name} is scheduled for tomorrow."
+    send_user_notification(booking.user, title, body, notification_type="about to check in", related_id=booking.id)
+
+
+def send_guest_checkout_reminder(booking):
+    title = "Upcoming Check-Out"
+    body = f"Reminder: Your check-out for {booking.property.name} is scheduled for tomorrow."
+    send_user_notification(booking.user, title, body, notification_type="about to check out", related_id=booking.id)
+
+
+def send_booking_status_notification(booking):
+    status = booking.status
+    if status == "CONFIRMED":
+        title = "Booking Approved"
+        body = f"Your booking for {booking.property.name} has been approved by the host."
+    elif status == "DECLINED":
+        title = "Booking Declined"
+        body = f"Your booking for {booking.property.name} has been declined by the host."
+    else:
+        title = "Booking Status Updated"
+        body = f"Your booking for {booking.property.name} has been updated to {status}."
+        
+    send_user_notification(booking.user, title, body, notification_type="booking", related_id=booking.id)
