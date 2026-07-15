@@ -338,9 +338,9 @@ class OwnerBookingViewSet(viewsets.ReadOnlyModelViewSet):
         return MyBookingListSerializer
         
     def get_queryset(self):
-        status_param = self.request.query_params.get('status', 'PENDING')
+        status_param = self.request.query_params.get('status')
         bookings = Booking.objects.filter(property__owner=self.request.user).select_related('property')
-        if status_param != 'ALL':
+        if status_param:
             bookings = bookings.filter(status=status_param)
         return bookings
 
