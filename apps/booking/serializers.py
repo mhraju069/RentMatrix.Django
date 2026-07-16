@@ -30,7 +30,26 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        # Could add validation for check_in < check_out, property availability, etc.
+        check_in = data.get('check_in')
+        check_out = data.get('check_out')
+        prop = data.get('property')
+        
+        if check_in and check_out:
+            if check_in >= check_out:
+                raise serializers.ValidationError({"check_in": "Check-in date must be before check-out date."})
+            
+            # Check if there is an overlapping confirmed/checked-in booking for this property
+            overlapping_exists = Booking.objects.filter(
+                property=prop,
+                status__in=['CONFIRMED', 'CHECKED_IN'],
+                check_in__lt=check_out,
+                check_out__gt=check_in
+            ).exists()
+            
+            if overlapping_exists:
+                raise serializers.ValidationError({
+                    "non_field_errors": "This property is already booked for the selected dates."
+                })
         return data
 
     def create(self, validated_data):

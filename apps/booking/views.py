@@ -292,6 +292,21 @@ class ConfirmBookingView(views.APIView):
         if booking.status == "CONFIRMED":
             return Response({"status": 400, "success": False, "message": "Booking already confirmed"}, status=status.HTTP_400_BAD_REQUEST)
             
+        # Check for conflicting confirmed/checked-in bookings for the same property
+        conflicting_booking_exists = Booking.objects.filter(
+            property=booking.property,
+            status__in=['CONFIRMED', 'CHECKED_IN'],
+            check_in__lt=booking.check_out,
+            check_out__gt=booking.check_in
+        ).exclude(id=booking.id).exists()
+        
+        if conflicting_booking_exists:
+            return Response({
+                "status": 400,
+                "success": False,
+                "message": "Cannot confirm booking due to date conflict with another confirmed booking."
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
         booking.status = "CONFIRMED"
         booking.save()
         

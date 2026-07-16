@@ -203,6 +203,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     rating_breakdown = serializers.SerializerMethodField()
     currency_code = serializers.SerializerMethodField()
     currency_symbol = serializers.SerializerMethodField()
+    booked_ranges = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
@@ -212,7 +213,24 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'average_rating', 'address', 'latitude', 'longitude', 'distance', 'rating_breakdown',
             'weekend_dates', 'vacations', 'other_charges',
             'gallery', 'add_ons_prices', 'amenities', 'activities', 'reviews', 'views', 'favourite', 'discount',
-            'currency_code', 'currency_symbol'
+            'currency_code', 'currency_symbol', 'booked_ranges'
+        ]
+
+    def get_booked_ranges(self, obj):
+        from apps.booking.models import Booking
+        from django.utils import timezone
+        today = timezone.now().date()
+        bookings = Booking.objects.filter(
+            property=obj,
+            status__in=['CONFIRMED', 'CHECKED_IN'],
+            check_out__gte=today
+        ).values('check_in', 'check_out')
+        return [
+            {
+                "check_in": b['check_in'].strftime('%Y-%m-%d'),
+                "check_out": b['check_out'].strftime('%Y-%m-%d')
+            }
+            for b in bookings
         ]
 
     @extend_schema_field(OpenApiTypes.STR)

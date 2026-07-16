@@ -140,3 +140,71 @@ class OwnerBookingTests(APITestCase):
 
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, "DECLINED")
+
+    def test_owner_cannot_confirm_overlapping_booking(self):
+        # Create a second booking with overlapping dates
+        second_booking = Booking.objects.create(
+            property=self.property,
+            user=self.guest,
+            name="Conflicting Booking",
+            phone="0987654321",
+            email="guest2@example.com",
+            guest_count=1,
+            check_in=self.booking.check_in,
+            check_out=self.booking.check_out,
+            price=300.00,
+            status="PENDING"
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        
+        # Confirm the first booking
+        url_confirm_first = f"/booking/api/v1/owner/booking/confirm/{self.booking.id}/"
+        res_first = self.client.patch(url_confirm_first)
+        self.assertEqual(res_first.status_code, status.HTTP_200_OK)
+
+        # Attempting to confirm the second booking should fail
+        url_confirm_second = f"/booking/api/v1/owner/booking/confirm/{second_booking.id}/"
+        res_second = self.client.patch(url_confirm_second)
+        self.assertEqual(res_second.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("date conflict", res_second.data["message"])
+
+    def test_guest_cannot_create_overlapping_booking(self):
+        # Confirm the first booking first
+        self.booking.status = "CONFIRMED"
+        self.booking.save()
+
+        # Try to create an overlapping booking via API as guest
+        self.client.force_authenticate(user=self.guest)
+        
+        payload = {
+            "property": str(self.property.id),
+            "name": "Another Guest",
+            "phone": "1234567890",
+            "email": "another@example.com",
+            "check_in": str(self.booking.check_in),
+            "check_out": str(self.booking.check_out),
+            "guest_count": 2,
+            "price_type": "daily"
+        }
+        url = "/booking/api/v1/guest/booking/"
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("This property is already booked for the selected dates.", str(response.data))
+
+    def test_property_detail_includes_booked_ranges(self):
+        # Confirm the booking first
+        self.booking.status = "CONFIRMED"
+        self.booking.save()
+
+        self.client.force_authenticate(user=self.guest)
+        url = f"/property/api/v1/guest/property/{self.property.id}/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify booked_ranges is present and populated
+        self.assertIn("booked_ranges", response.data)
+        self.assertEqual(len(response.data["booked_ranges"]), 1)
+        self.assertEqual(response.data["booked_ranges"][0]["check_in"], str(self.booking.check_in))
+        self.assertEqual(response.data["booked_ranges"][0]["check_out"], str(self.booking.check_out))
+
