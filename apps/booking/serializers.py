@@ -42,13 +42,36 @@ class CreateBookingSerializer(serializers.ModelSerializer):
 
 class BookingListSerializer(serializers.ModelSerializer):
     property = PropertyListSerializer()
+    currency_code = serializers.SerializerMethodField()
+    currency_symbol = serializers.SerializerMethodField()
     
     class Meta:
         model = Booking
         fields = [
             'id', 'property', 'name', 'phone', 'email', 'guest_count', 
-            'check_in', 'check_out', 'price', 'status'
+            'check_in', 'check_out', 'price', 'status', 'currency_code', 'currency_symbol'
         ]
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return code
+
+    def get_currency_symbol(self, obj):
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return symbol
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        if ret.get('price') is not None:
+            ret['price'] = round(float(ret['price']) * rate, 2)
+        return ret
 
 class BookingDetailsSerializer(serializers.ModelSerializer):
     property = PropertyListSerializer()
@@ -56,14 +79,38 @@ class BookingDetailsSerializer(serializers.ModelSerializer):
     documents = serializers.SerializerMethodField()
     booking_status_tracker = serializers.SerializerMethodField()
     security_approval_tracker = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
+    currency_symbol = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = [
             'id', 'property', 'owner', 'name', 'phone', 'email', 'guest_count', 
             'check_in', 'check_out', 'price', 'status', 'created_at', 'updated_at',
-            'documents', 'booking_status_tracker', 'security_approval_tracker'
+            'documents', 'booking_status_tracker', 'security_approval_tracker',
+            'currency_code', 'currency_symbol'
         ]
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return code
+
+    def get_currency_symbol(self, obj):
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return symbol
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        if ret.get('price') is not None:
+            ret['price'] = round(float(ret['price']) * rate, 2)
+        return ret
 
     def get_booking_status_tracker(self, obj):
         return {
@@ -97,14 +144,37 @@ class MyBookingListSerializer(serializers.ModelSerializer):
     guest_phone = serializers.CharField(source='phone', read_only=True)
     guest_email = serializers.CharField(source='email', read_only=True)
     user = UserDataSerializer(read_only=True)
+    currency_code = serializers.SerializerMethodField()
+    currency_symbol = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = [
             'id', 'status', 'name', 'property_name', 'address', 'cover',
             'guest_name', 'guest_phone', 'guest_email', 'check_in', 'check_out',
-            'guest_count', 'price', 'user'
+            'guest_count', 'price', 'user', 'currency_code', 'currency_symbol'
         ]
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return code
+
+    def get_currency_symbol(self, obj):
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        return symbol
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        from apps.others.utils import get_user_currency_and_rate
+        code, symbol, rate = get_user_currency_and_rate(request)
+        if ret.get('price') is not None:
+            ret['price'] = round(float(ret['price']) * rate, 2)
+        return ret
         
     def get_cover(self, obj):
         if obj.property and obj.property.cover_image:
