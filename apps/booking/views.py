@@ -81,9 +81,25 @@ class CalculateBookingPriceView(views.APIView):
             # Multiply all breakdown elements by duration and rate for total transparency
             total_breakdown = {
                 "base_price_total": round(breakdown["base_price"] * total_duration * rate, 2),
-                "other_charges": [{"name": c["name"], "percentage": c["percentage"], "total_amount": round(c["amount"] * total_duration * rate, 2)} for c in breakdown["other_charges"]],
+                "other_charges": [
+                    {
+                        "name": c["name"],
+                        "percentage": round(c["percentage"] * rate, 2),
+                        "amount": round(c["amount"] * rate, 2),
+                        "total_amount": round(c["amount"] * total_duration * rate, 2)
+                    }
+                    for c in breakdown["other_charges"]
+                ],
                 "other_charges_total": round(breakdown["other_charges_total"] * total_duration * rate, 2),
-                "add_ons": [{"name": a["name"], "percentage": a["percentage"], "total_amount": round(a["amount"] * total_duration * rate, 2)} for a in breakdown["add_ons"]],
+                "add_ons": [
+                    {
+                        "name": a["name"],
+                        "percentage": round(a["percentage"] * rate, 2),
+                        "amount": round(a["amount"] * rate, 2),
+                        "total_amount": round(a["amount"] * total_duration * rate, 2)
+                    }
+                    for a in breakdown["add_ons"]
+                ],
                 "add_ons_total": round(breakdown["add_ons_total"] * total_duration * rate, 2),
                 "vacation_surcharge_total": round(breakdown["vacation_surcharge"] * total_duration * rate, 2),
                 "weekend_surcharge_total": round(breakdown["weekend_surcharge"] * total_duration * rate, 2),
