@@ -208,3 +208,41 @@ class OwnerBookingTests(APITestCase):
         self.assertEqual(response.data["booked_ranges"][0]["check_in"], str(self.booking.check_in))
         self.assertEqual(response.data["booked_ranges"][0]["check_out"], str(self.booking.check_out))
 
+    def test_create_booking_with_security_document(self):
+        self.client.force_authenticate(user=self.guest)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        
+        # Create a dummy file for the security document
+        dummy_file = SimpleUploadedFile("security_doc.pdf", b"dummy content", content_type="application/pdf")
+        
+        payload = {
+            "property": str(self.property.id),
+            "name": "Guest With Doc",
+            "phone": "1234567890",
+            "email": "docguest@example.com",
+            "check_in": str(datetime.date.today() + datetime.timedelta(days=10)),
+            "check_out": str(datetime.date.today() + datetime.timedelta(days=13)),
+            "guest_count": 2,
+            "price_type": "daily",
+            "security_document": dummy_file
+        }
+        url = "/booking/api/v1/guest/booking/"
+        response = self.client.post(url, payload, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify the security document is saved in the db and returned in list/detail serialization
+        booking_id = response.data["data"]["id"]
+        booking = Booking.objects.get(id=booking_id)
+        self.assertTrue(booking.security_document.name.endswith("security_doc.pdf"))
+        
+        self.assertIn("security_document", response.data["data"])
+        self.assertIsNotNone(response.data["data"]["security_document"])
+        
+        # Verify retrieve detail also includes security_document
+        url_detail = f"/booking/api/v1/guest/booking/{booking_id}/"
+        res_detail = self.client.get(url_detail)
+        self.assertEqual(res_detail.status_code, status.HTTP_200_OK)
+        self.assertIn("security_document", res_detail.data["data"])
+        self.assertIsNotNone(res_detail.data["data"]["security_document"])
+
+

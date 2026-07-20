@@ -26,7 +26,7 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         fields = [
             'property', 'name', 'phone', 'email', 'check_in', 'check_out', 
             'guest_count', 'price_type', 'selected_addon_ids',
-            'document_file', 'document_type'
+            'document_file', 'document_type', 'security_document'
         ]
 
     def validate(self, data):
@@ -68,7 +68,8 @@ class BookingListSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'property', 'name', 'phone', 'email', 'guest_count', 
-            'check_in', 'check_out', 'price', 'status', 'currency_code', 'currency_symbol'
+            'check_in', 'check_out', 'price', 'status', 'currency_code', 'currency_symbol',
+            'security_document'
         ]
 
     def get_currency_code(self, obj):
@@ -107,7 +108,7 @@ class BookingDetailsSerializer(serializers.ModelSerializer):
             'id', 'property', 'owner', 'name', 'phone', 'email', 'guest_count', 
             'check_in', 'check_out', 'price', 'status', 'created_at', 'updated_at',
             'documents', 'booking_status_tracker', 'security_approval_tracker',
-            'currency_code', 'currency_symbol'
+            'currency_code', 'currency_symbol', 'security_document'
         ]
 
     def get_currency_code(self, obj):
@@ -171,7 +172,8 @@ class MyBookingListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'status', 'name', 'property_name', 'address', 'cover',
             'guest_name', 'guest_phone', 'guest_email', 'check_in', 'check_out',
-            'guest_count', 'price', 'user', 'currency_code', 'currency_symbol'
+            'guest_count', 'price', 'user', 'currency_code', 'currency_symbol',
+            'security_document'
         ]
 
     def get_currency_code(self, obj):

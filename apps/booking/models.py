@@ -28,6 +28,7 @@ class Booking(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     cancel_reason = models.TextField(blank=True, null=True)
+    security_document = models.FileField(upload_to='security_approval_documents/', blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
