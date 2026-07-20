@@ -14,6 +14,10 @@ class PropertyDRFTests(APITestCase):
         self.user.is_active = True
         self.user.save()
         self.client.force_authenticate(user=self.user)
+        # Get or create currencies
+        from apps.others.models import Currency
+        self.usd, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "exchange_rate": 1.0})
+        self.bdt, _ = Currency.objects.get_or_create(code="BDT", defaults={"name": "Bangladeshi Taka", "symbol": "৳", "exchange_rate": 117.0})
 
     def test_create_property_drf(self):
         gif_bytes = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
@@ -25,6 +29,7 @@ class PropertyDRFTests(APITestCase):
             "about": "A beautiful condo with a direct view of the sea.",
             "price_daily": 150.00,
             "price_monthly": 4000.00,
+            "currency_code": "USD",
             "bathroom": 2,
             "bedroom": 3,
             "area": "1500 sqft",
@@ -96,6 +101,7 @@ class PropertyDRFTests(APITestCase):
         data = {
             "name": "Updated Name",
             "price_daily": 120.00,
+            "currency_code": "USD",
             "add_ons_prices": json.dumps([
                 {"service": "Laundry", "price": 10}
             ]),
@@ -536,6 +542,75 @@ class PropertyDRFTests(APITestCase):
         self.assertEqual(response.data["data"][0]["name"], "Paris")
         self.assertEqual(len(response.data["data"][0]["images"]), 1)
         self.assertIn("/media/place_images/paris.jpg", response.data["data"][0]["images"][0]["image"])
+
+    def test_property_currency_conversion_flow(self):
+        from apps.others.models import UserPreference
+        UserPreference.objects.create(user=self.user, currency=self.bdt)
+        
+        # 1. Create property in BDT
+        # Price daily: 1170.00 BDT. Exchange rate of BDT is 117.0.
+        # This should convert to 10.00 USD in the database.
+        data = {
+            "name": "BDT Property",
+            "about": "BDT property description",
+            "price_daily": 1170.00,
+            "price_monthly": 117000.00,
+            "currency_code": "BDT",
+            "bathroom": 1,
+            "bedroom": 1,
+            "area": "500 sqft",
+            "type": "HOUSE",
+            "status": "AVAILABLE",
+            "address": "Dhaka",
+            "add_ons_prices": json.dumps([
+                {"service": "Breakfast", "price": 117}
+            ]),
+            "weekend_dates": json.dumps({
+                "weekend": ["FRI"],
+                "price": 2340
+            }),
+            "other_charges": json.dumps([
+                {"name": "VAT", "price": 58.50}
+            ])
+        }
+        
+        response = self.client.post("/property/api/v1/owner/create-property/", data, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify stored in database as USD:
+        # price_daily: 1170 / 117 = 10 USD
+        # price_monthly: 117000 / 117 = 1000 USD
+        property_obj = Property.objects.get(name="BDT Property")
+        self.assertEqual(float(property_obj.price_daily), 10.00)
+        self.assertEqual(float(property_obj.price_monthly), 1000.00)
+        
+        # Check add_ons_prices service Breakfast: 117 / 117 = 1 USD
+        addon = property_obj.add_ons_prices.first()
+        self.assertEqual(float(addon.price), 1.00)
+        
+        # Check weekend_dates price: 2340 / 117 = 20 USD
+        self.assertEqual(float(property_obj.weekend_dates.price), 20.00)
+        
+        # Check other_charges VAT: 58.5 / 117 = 0.5 USD
+        charge = property_obj.other_charges.first()
+        self.assertEqual(float(charge.price), 0.50)
+        
+        # 2. Retrieve property: since user's preferred currency is BDT,
+        # it should convert back to BDT when returned!
+        url = f"/property/api/v1/guest/property/{property_obj.id}/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Returned prices should be:
+        # price_daily: 10 * 117 = 1170.0
+        # price_monthly: 1000 * 117 = 117000.0
+        # weekend_dates.price: 20 * 117 = 2340.0
+        # add_ons_prices[0].price: 1 * 117 = 117.0
+        # other_charges[0].price: 0.5 * 117 = 58.5
+        self.assertEqual(response.data["price_daily"], 1170.00)
+        self.assertEqual(response.data["price_monthly"], 117000.00)
+        self.assertEqual(response.data["weekend_dates"]["price"], 2340.00)
+        self.assertEqual(response.data["add_ons_prices"][0]["price"], 117.00)
+        self.assertEqual(response.data["other_charges"][0]["price"], 58.50)
 
 
 

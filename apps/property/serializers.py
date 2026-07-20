@@ -342,6 +342,8 @@ class PropertySerializer(serializers.ModelSerializer):
     other_charges = OtherChargesSerializer(many=True, required=False)
     cover = serializers.ImageField(source='cover_image', required=False, allow_null=True)
     owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    currency_code = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    currency_symbol = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Property
@@ -372,10 +374,98 @@ class PropertySerializer(serializers.ModelSerializer):
             "add_ons_prices",
             "amenities",
             "activities",
+            "currency_code",
+            "currency_symbol",
         ]
         read_only_fields = ["owner","created_at","updated_at"]
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        
+        # Check if we are creating, or updating any price-related fields
+        price_fields = ['price_daily', 'price_monthly', 'weekend_dates', 'vacations', 'other_charges', 'add_ons_prices']
+        has_prices = any(field in attrs for field in price_fields)
+        is_create = self.instance is None
+
+        currency_code = attrs.get('currency_code')
+        currency_symbol = attrs.get('currency_symbol')
+
+        if is_create or has_prices:
+            from apps.others.models import Currency, UserPreference
+            
+            if not currency_code and not currency_symbol:
+                raise serializers.ValidationError({
+                    "currency_code": "Currency code or currency symbol is mandatory when setting prices."
+                })
+
+            currency = None
+            if currency_code:
+                currency = Currency.objects.filter(code=currency_code.upper()).first()
+            
+            if not currency and currency_symbol:
+                currencies = Currency.objects.filter(symbol=currency_symbol)
+                if currencies.exists():
+                    user_currency_code = None
+                    if request and request.user and request.user.is_authenticated:
+                        try:
+                            pref = UserPreference.objects.select_related('currency').get(user=request.user)
+                            if pref.currency:
+                                user_currency_code = pref.currency.code
+                        except Exception:
+                            pass
+                    
+                    if user_currency_code:
+                        currency = currencies.filter(code=user_currency_code).first()
+                    if not currency:
+                        currency = currencies.first()
+
+            if not currency:
+                raise serializers.ValidationError({
+                    "currency_code": f"Unsupported or invalid currency: {currency_code or currency_symbol}"
+                })
+
+            rate = currency.exchange_rate
+            
+            def to_usd(val):
+                if val is None:
+                    return None
+                from decimal import Decimal
+                try:
+                    return round(Decimal(str(val)) / rate, 2)
+                except Exception:
+                    return val
+
+            if 'price_daily' in attrs and attrs['price_daily'] is not None:
+                attrs['price_daily'] = to_usd(attrs['price_daily'])
+            
+            if 'price_monthly' in attrs and attrs['price_monthly'] is not None:
+                attrs['price_monthly'] = to_usd(attrs['price_monthly'])
+
+            if 'weekend_dates' in attrs and attrs['weekend_dates'] is not None:
+                weekend_data = attrs['weekend_dates']
+                if 'price' in weekend_data and weekend_data['price'] is not None:
+                    weekend_data['price'] = to_usd(weekend_data['price'])
+
+            if 'vacations' in attrs and attrs['vacations'] is not None:
+                vacation_data = attrs['vacations']
+                if 'price' in vacation_data and vacation_data['price'] is not None:
+                    vacation_data['price'] = to_usd(vacation_data['price'])
+
+            if 'other_charges' in attrs and attrs['other_charges'] is not None:
+                for charge in attrs['other_charges']:
+                    if 'price' in charge and charge['price'] is not None:
+                        charge['price'] = to_usd(charge['price'])
+
+            if 'add_ons_prices' in attrs and attrs['add_ons_prices'] is not None:
+                for addon in attrs['add_ons_prices']:
+                    if 'price' in addon and addon['price'] is not None:
+                        addon['price'] = to_usd(addon['price'])
+
+        return super().validate(attrs)
     
     def create(self, validated_data):
+        validated_data.pop("currency_code", None)
+        validated_data.pop("currency_symbol", None)
         gallery = validated_data.pop("galleries", [])
         add_ons_prices = validated_data.pop("add_ons_prices", [])
         amenities = validated_data.pop("amenities", [])
@@ -410,6 +500,8 @@ class PropertySerializer(serializers.ModelSerializer):
         return property
 
     def update(self, instance, validated_data):
+        validated_data.pop("currency_code", None)
+        validated_data.pop("currency_symbol", None)
         gallery = validated_data.pop("galleries", None)
         add_ons_prices = validated_data.pop("add_ons_prices", None)
         amenities = validated_data.pop("amenities", None)
