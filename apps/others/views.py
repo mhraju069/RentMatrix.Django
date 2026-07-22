@@ -1,10 +1,10 @@
-from rest_framework import views, status, viewsets
+from rest_framework import views, status, viewsets ,generics
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from drf_spectacular.utils import extend_schema
-
+from apps.property.models import Review,Property
 from apps.others.models import Language, Currency, UserPreference
-from apps.others.serializers import LanguageSerializer, CurrencySerializer, UserPreferenceSerializer
+from apps.others.serializers import LanguageSerializer, CurrencySerializer, UserPreferenceSerializer, ReviewSerializer
 from apps.auth.utils import format_serializer_errors
 
 class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
@@ -80,3 +80,20 @@ class UserPreferenceView(views.APIView):
             "success": False,
             "errors": format_serializer_errors(serializer.errors)
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReviewView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        return Review.objects.filter(property_id=self.kwargs["property_id"]).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user,property_id=self.kwargs["property_id"])
+
+
+class ReviewRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReviewSerializer
+    queryset = Review.objects.all()

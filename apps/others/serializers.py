@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from apps.others.models import Language, Currency, UserPreference
+from apps.property.models import Review
 
 class LanguageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,3 +67,11 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+class ReviewSerializer(serializers.ModelSerializer):    
+    class Meta:
+        model = Review
+        fields = "__all__"
+        read_only_fields = ['id', 'created_at', 'updated_at', 'property', 'user']
+
+    
