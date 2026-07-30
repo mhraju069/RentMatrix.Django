@@ -210,7 +210,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = [
-            'id', 'name', 'about', 'price_daily', 'price_monthly', 'owner', 'bathroom', 'bedroom', 'size',
+            'id', 'name', 'about', 'price_daily', 'price_monthly', 'owner', 'bathroom', 'bedroom', 'size','hosted_by','whatsapp',
             'type', 'status', 'verified', 'sea_view', 'review_count', 'cover',
             'average_rating', 'address', 'latitude', 'longitude', 'distance', 'rating_breakdown',
             'weekend_dates', 'vacations', 'other_charges',
