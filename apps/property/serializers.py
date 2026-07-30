@@ -151,9 +151,11 @@ class GallerySerializer(serializers.ModelSerializer):
 
 
 class AddOnsPriceSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+
     class Meta:
         model = AddOnsPrice
-        fields = ["id","service", "price"]
+        fields = ["id", "service", "price"]
 
 class AmenitySerializer(serializers.ModelSerializer):
     class Meta:

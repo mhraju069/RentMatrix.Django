@@ -298,6 +298,7 @@ class CancelBookingView(views.APIView):
 
 class ConfirmBookingView(views.APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     
     @extend_schema(request=None, responses={200: dict})
     def patch(self, request, booking_id):
@@ -324,6 +325,11 @@ class ConfirmBookingView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
             
         booking.status = "CONFIRMED"
+        
+        security_doc = request.FILES.get('security_document')
+        if security_doc:
+            booking.security_document = security_doc
+            
         booking.save()
         
         try:

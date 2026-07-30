@@ -751,6 +751,89 @@ class BasePropertyMutationView(views.APIView):
         if val is None: return []
         return val if isinstance(val, list) else [val]
 
+    @staticmethod
+    def _detect_type(f):
+        """Return 'VIDEO' or 'IMAGE' based on MIME type."""
+        ct = getattr(f, 'content_type', '') or ''
+        return 'VIDEO' if ct.startswith('video/') else 'IMAGE'
+
+    def parse_gallery(self, request):
+        """
+        Build a list of gallery dicts, each with 'file' and 'type' keys.
+
+        Supported upload formats (all via multipart/form-data):
+
+        Format 1 — Indexed per-item  (RECOMMENDED, file + type together):
+            gallery[0][file]  = <file>
+            gallery[0][type]  = IMAGE          # optional, auto-detected if omitted
+            gallery[1][file]  = <video.mp4>
+            gallery[1][type]  = VIDEO
+
+        Format 2 — Files only (type auto-detected from MIME):
+            gallery_files = <file1>
+            gallery_files = <file2>
+
+        Format 3 — JSON metadata paired with flat files by index:
+            gallery        = [{"type": "IMAGE"}, {"type": "VIDEO"}]  (JSON string)
+            gallery_files  = <file1>
+            gallery_files  = <file2>
+        """
+        gallery = []
+
+        # ── Format 1: gallery[i][file] + gallery[i][type] ──────────────────────
+        # Scan request.FILES for keys matching gallery[<n>][file]
+        import re
+        indexed: dict = {}  # {int_index: {'file': ..., 'type': ...}}
+        file_key_pattern = re.compile(r'^gallery\[(\d+)\]\[file\]$')
+        type_key_pattern = re.compile(r'^gallery\[(\d+)\]\[type\]$')
+
+        for key, file_obj in request.FILES.items():
+            m = file_key_pattern.match(key)
+            if m:
+                idx = int(m.group(1))
+                indexed.setdefault(idx, {})['file'] = file_obj
+
+        for key in request.data:
+            m = type_key_pattern.match(key)
+            if m:
+                idx = int(m.group(1))
+                indexed.setdefault(idx, {})['type'] = request.data[key]
+
+        if indexed:
+            for idx in sorted(indexed.keys()):
+                item = indexed[idx]
+                if 'file' not in item:
+                    continue  # skip entries without a file
+                if 'type' not in item or not item.get('type'):
+                    item['type'] = self._detect_type(item['file'])
+                gallery.append(item)
+            return gallery
+
+        # ── Format 2 & 3: flat files + optional JSON metadata ──────────────────
+        flat_files = request.FILES.getlist('gallery_files') or request.FILES.getlist('gallery')
+        raw = request.data.get('gallery') or self.safe_getlist(request, 'gallery')
+        # Strip any file objects that multipart may have mixed into data
+        if isinstance(raw, list):
+            raw = [g for g in raw if not hasattr(g, 'read')]
+        parsed = self.parse_json_field(raw)
+
+        if parsed and parsed not in (['string'], ['']):
+            # Format 3: JSON metadata paired with flat files by index
+            for index, item in enumerate(parsed):
+                g_item = item.copy() if isinstance(item, dict) else {'type': item}
+                if 'file' not in g_item and index < len(flat_files):
+                    g_item['file'] = flat_files[index]
+                if 'type' not in g_item or not g_item.get('type'):
+                    if 'file' in g_item:
+                        g_item['type'] = self._detect_type(g_item['file'])
+                gallery.append(g_item)
+        elif flat_files:
+            # Format 2: files only
+            for f in flat_files:
+                gallery.append({'file': f, 'type': self._detect_type(f)})
+
+        return gallery
+
 class CreatePropertyDRF(BasePropertyMutationView):
     serializer_class = PropertySerializer
     parser_classes = (JSONParser, MultiPartParser, FormParser)
@@ -759,17 +842,7 @@ class CreatePropertyDRF(BasePropertyMutationView):
     def post(self, request):
 
 
-        gallery_raw = request.data.get("gallery") or self.safe_getlist(request, "gallery")
-        gallery_parsed = self.parse_json_field(gallery_raw)
-        gallery_files = request.FILES.getlist("gallery_files") or request.FILES.getlist("gallery")
-        
-        gallery = []
-        if gallery_parsed not in (["string"], [""]):
-            for index, item in enumerate(gallery_parsed):
-                g_item = item.copy() if isinstance(item, dict) else {"type": item}
-                if "file" not in g_item and index < len(gallery_files):
-                    g_item["file"] = gallery_files[index]
-                gallery.append(g_item)
+        gallery = self.parse_gallery(request)
 
         data = {k: v for k, v in request.data.items()}
         
@@ -786,9 +859,16 @@ class CreatePropertyDRF(BasePropertyMutationView):
             cover = None
 
         def clean_prices(field_name):
-            parsed = self.parse_json_field(request.data.get(field_name) or self.safe_getlist(request, field_name))
-            if parsed and isinstance(parsed, list) and isinstance(parsed[0], str):
+            raw = request.data.get(field_name) or self.safe_getlist(request, field_name)
+            parsed = self.parse_json_field(raw)
+            # Only discard Swagger UI placeholder values — never discard real data
+            if not parsed:
                 return []
+            if isinstance(parsed, list) and len(parsed) > 0:
+                first = parsed[0]
+                # If first item is still a plain string (not a dict), it's a placeholder
+                if isinstance(first, str) and first.strip() in ('string', ''):
+                    return []
             return parsed
 
         data.update({
@@ -811,6 +891,32 @@ class CreatePropertyDRF(BasePropertyMutationView):
                 data.pop(k, None)
         
         serializer = PropertySerializer(data=data, context={"request": request})
+        
+        # Debug mode: return what the server received without saving — pass ?debug=true
+        if str(request.query_params.get("debug", "")).lower() in ("true", "1"):
+            return Response({
+                "debug": True,
+                "received_fields": {
+                    "raw_add_ons_prices":  str(request.data.get("add_ons_prices"))[:300],
+                    "raw_other_charges":   str(request.data.get("other_charges"))[:300],
+                    "raw_amenities":       str(request.data.get("amenities"))[:300],
+                    "raw_activities":      str(request.data.get("activities"))[:300],
+                    "raw_weekend_dates":   str(request.data.get("weekend_dates"))[:300],
+                    "raw_vacations":       str(request.data.get("vacations"))[:300],
+                    "all_keys":            list(request.data.keys()),
+                    "file_keys":           list(request.FILES.keys()),
+                },
+                "parsed_fields": {
+                    "add_ons_prices": str(data.get("add_ons_prices", "NOT IN DATA"))[:300],
+                    "other_charges":  str(data.get("other_charges", "NOT IN DATA"))[:300],
+                    "amenities":      str(data.get("amenities", "NOT IN DATA"))[:300],
+                    "activities":     str(data.get("activities", "NOT IN DATA"))[:300],
+                    "gallery_count":  len(data.get("gallery", [])),
+                },
+                "serializer_valid": serializer.is_valid(),
+                "serializer_errors": serializer.errors if not serializer.is_valid() else {}
+            })
+        
         if serializer.is_valid():
             serializer.save()
             return Response({"status": 200, "success": True, "message": "Property created successfully"})
@@ -852,18 +958,11 @@ class UpdatePropertyDRF(BasePropertyMutationView):
 
 
 
-        if "gallery" in request.data or "gallery_files" in request.FILES:
-            gallery_parsed = self.parse_json_field(request.data.get("gallery") or self.safe_getlist(request, "gallery"))
-            if gallery_parsed in (["string"], [""]):
-                data.pop("gallery", None)
-            else:
-                gallery_files = request.FILES.getlist("gallery_files") or request.FILES.getlist("gallery")
-                gallery = []
-                for index, item in enumerate(gallery_parsed):
-                    g_item = item.copy() if isinstance(item, dict) else {"type": item}
-                    if "file" not in g_item and index < len(gallery_files): g_item["file"] = gallery_files[index]
-                    gallery.append(g_item)
-                data["gallery"] = gallery
+        gallery_update = self.parse_gallery(request)
+        if gallery_update:
+            data["gallery"] = gallery_update
+        else:
+            data.pop("gallery", None)
 
         for price_field in ["add_ons_prices", "other_charges", "amenities", "activities"]:
             if price_field in request.data:
