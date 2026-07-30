@@ -215,7 +215,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'average_rating', 'address', 'latitude', 'longitude', 'distance', 'rating_breakdown',
             'weekend_dates', 'vacations', 'other_charges',
             'gallery', 'add_ons_prices', 'amenities', 'activities', 'reviews', 'views', 'favourite', 'discount',
-            'currency_code', 'currency_symbol', 'booked_ranges'
+            'currency_code', 'currency_symbol', 'booked_ranges',
+            'rating_threshold', 'rating_surcharge_percent'
         ]
 
     def get_booked_ranges(self, obj):
@@ -378,6 +379,8 @@ class PropertySerializer(serializers.ModelSerializer):
             "activities",
             "currency_code",
             "currency_symbol",
+            "rating_threshold",
+            "rating_surcharge_percent",
         ]
         read_only_fields = ["owner","created_at","updated_at"]
 

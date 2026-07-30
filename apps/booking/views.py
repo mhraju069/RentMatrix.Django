@@ -103,6 +103,7 @@ class CalculateBookingPriceView(views.APIView):
                 "add_ons_total": round(breakdown["add_ons_total"] * total_duration * rate, 2),
                 "vacation_surcharge_total": round(breakdown["vacation_surcharge"] * total_duration * rate, 2),
                 "weekend_surcharge_total": round(breakdown["weekend_surcharge"] * total_duration * rate, 2),
+                "rating_surcharge_total": round(breakdown.get("rating_surcharge", 0) * total_duration * rate, 2),
                 "discount_total": round(breakdown["discount_amount"] * total_duration * rate, 2),
                 "total_amount_before_discount": round(breakdown["total_before_discount"] * total_duration * rate, 2)
             }

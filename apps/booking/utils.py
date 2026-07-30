@@ -98,7 +98,22 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
 
     breakdown["total_before_discount"] = float(total_price)
 
-    # 5. Finally apply discount
+    # 5. Rating surcharge — applied if avg rating >= owner-defined threshold
+    rating_surcharge_amount = Decimal("0.0")
+    if property_obj.rating_threshold and property_obj.rating_surcharge_percent:
+        avg_rating_result = property_obj.reviews.aggregate(avg=Avg("rating"))
+        avg_rating = avg_rating_result.get("avg") or 0
+        if avg_rating and Decimal(str(avg_rating)) >= Decimal(str(property_obj.rating_threshold)):
+            rating_surcharge_amount = (
+                Decimal(str(base_price))
+                * Decimal(str(property_obj.rating_surcharge_percent))
+                / Decimal("100")
+            )
+            total_price += rating_surcharge_amount
+
+    breakdown["rating_surcharge"] = float(rating_surcharge_amount)
+
+    # 6. Finally apply discount
     discount = property_obj.discount or 0
     discount_amount = (Decimal(str(base_price)) * Decimal(str(discount)) / Decimal("100"))
     total_price -= discount_amount

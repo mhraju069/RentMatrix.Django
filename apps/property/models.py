@@ -45,6 +45,14 @@ class Property(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     discount = models.IntegerField(default=0)
+    rating_threshold = models.DecimalField(
+        max_digits=3, decimal_places=1, null=True, blank=True,
+        help_text="Minimum avg rating to apply the rating surcharge (e.g. 4.0)"
+    )
+    rating_surcharge_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="Extra % added to base price when avg rating >= rating_threshold (e.g. 10 = 10%)"
+    )
 
     @property
     def price(self):
