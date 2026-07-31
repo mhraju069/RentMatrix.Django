@@ -4,6 +4,75 @@ from django.utils import timezone
 from decimal import Decimal
 import datetime
 
+def _month_matches(current_date, vacation_months):
+    """
+    Checks if current_date's month matches any month in vacation_months list,
+    handling formats like ['JUL', 'JULY', 'July', 'jul', 'july', 7, '07'].
+    """
+    if not vacation_months:
+        return False
+    if isinstance(vacation_months, str):
+        vacation_months = [vacation_months]
+
+    stored = {str(m).strip().upper() for m in vacation_months}
+
+    short_name = current_date.strftime("%b").upper()   # "JUL"
+    full_name = current_date.strftime("%B").upper()    # "JULY"
+    month_num = str(current_date.month)                # "7"
+    month_num_padded = f"{current_date.month:02d}"     # "07"
+
+    month_variants = {short_name, full_name, month_num, month_num_padded}
+    return bool(stored.intersection(month_variants))
+
+
+def _weekend_matches(current_date, weekend_days):
+    """
+    Checks if current_date's weekday matches any day in weekend_days list,
+    handling formats like ['SAT', 'SATURDAY', 'Saturday', 'sat', 'saturday'].
+    """
+    if not weekend_days:
+        return False
+    if isinstance(weekend_days, str):
+        weekend_days = [weekend_days]
+
+    stored = {str(d).strip().upper() for d in weekend_days}
+
+    short_name = current_date.strftime("%a").upper()   # "SAT"
+    full_name = current_date.strftime("%A").upper()    # "SATURDAY"
+
+    day_variants = {short_name, full_name}
+    return bool(stored.intersection(day_variants))
+
+
+def parse_addon_ids(raw_value):
+    """
+    Safely parses selected_addon_ids from any format:
+    - String with JSON array: "[79, 80]" or "['79', '80']"
+    - Comma-separated string: "79, 80"
+    - List/Tuple: [79, 80] or ['79', '80']
+    - Single ID: 79 or "79"
+    """
+    if not raw_value:
+        return []
+    if isinstance(raw_value, (list, tuple)):
+        result = []
+        for item in raw_value:
+            result.extend(parse_addon_ids(item))
+        return list(dict.fromkeys(result))
+    if isinstance(raw_value, str):
+        cleaned = raw_value.strip().lstrip('[').rstrip(']')
+        if not cleaned:
+            return []
+        parts = []
+        for item in cleaned.split(','):
+            item_clean = item.strip().strip('"').strip("'")
+            if item_clean:
+                parts.append(item_clean)
+        return list(dict.fromkeys(parts))
+    return [str(raw_value)]
+
+
+
 def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly",selected_addon_ids=None,start_date=None,end_date=None):
     if isinstance(property_obj_or_id, Property):
         property_obj = property_obj_or_id
@@ -32,20 +101,19 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
     # 1. Other Charges
     for oc in property_obj.other_charges.all():
         if oc.price:
-            charge = (Decimal(str(base_price)) * Decimal(str(oc.price)) / Decimal("100"))
+            charge = Decimal(str(oc.price))
             total_price += charge
-            breakdown["other_charges"].append({"name": oc.name, "amount": float(charge), "percentage": float(oc.price)})
+            breakdown["other_charges"].append({"name": oc.name, "amount": float(charge)})
             breakdown["other_charges_total"] += float(charge)
 
     # 2. Add-ons prices (only added if the user selects them)
     if selected_addon_ids:
-        # Convert all to strings for safe comparison
-        selected_ids_str = [str(i) for i in selected_addon_ids]
+        selected_ids_str = parse_addon_ids(selected_addon_ids)
         for addon in property_obj.add_ons_prices.all():
             if addon.price and str(addon.id) in selected_ids_str:
-                charge = (Decimal(str(base_price)) * Decimal(str(addon.price)) / Decimal("100"))
+                charge = Decimal(str(addon.price))
                 total_price += charge
-                breakdown["add_ons"].append({"name": addon.service, "amount": float(charge), "percentage": float(addon.price)})
+                breakdown["add_ons"].append({"name": addon.service, "amount": float(charge)})
                 breakdown["add_ons_total"] += float(charge)
 
     # Check if dates overlap with vacations or weekends
@@ -63,26 +131,26 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
                 end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
             except ValueError:
                 end_date = timezone.now().date()
-                
-        current_date = start_date
-        while current_date <= end_date:
-            month_str = current_date.strftime("%b").upper()
-            day_str = current_date.strftime("%a").upper()[0:3]
-            
-            if hasattr(property_obj, 'vacations') and property_obj.vacations and month_str in property_obj.vacations.month:
-                has_vacation = True
-            if hasattr(property_obj, 'weekend_dates') and property_obj.weekend_dates and day_str in property_obj.weekend_dates.weekend:
-                has_weekend = True
-                
+
+        d1, d2 = min(start_date, end_date), max(start_date, end_date)
+        current_date = d1
+        while current_date <= d2:
+            if hasattr(property_obj, 'vacations') and property_obj.vacations and property_obj.vacations.month:
+                if _month_matches(current_date, property_obj.vacations.month):
+                    has_vacation = True
+            if hasattr(property_obj, 'weekend_dates') and property_obj.weekend_dates and property_obj.weekend_dates.weekend:
+                if _weekend_matches(current_date, property_obj.weekend_dates.weekend):
+                    has_weekend = True
+
             current_date += datetime.timedelta(days=1)
     else:
-        current_date = timezone.now()
-        month_str = current_date.strftime("%b").upper()
-        day_str = current_date.strftime("%a").upper()[0:3]
-        if hasattr(property_obj, 'vacations') and property_obj.vacations and month_str in property_obj.vacations.month:
-            has_vacation = True
-        if hasattr(property_obj, 'weekend_dates') and property_obj.weekend_dates and day_str in property_obj.weekend_dates.weekend:
-            has_weekend = True
+        current_date = timezone.now().date()
+        if hasattr(property_obj, 'vacations') and property_obj.vacations and property_obj.vacations.month:
+            if _month_matches(current_date, property_obj.vacations.month):
+                has_vacation = True
+        if hasattr(property_obj, 'weekend_dates') and property_obj.weekend_dates and property_obj.weekend_dates.weekend:
+            if _weekend_matches(current_date, property_obj.weekend_dates.weekend):
+                has_weekend = True
 
     # 3. Vacations prices
     if has_vacation and hasattr(property_obj, 'vacations') and property_obj.vacations and property_obj.vacations.price:
@@ -95,8 +163,6 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
         charge = (Decimal(str(base_price)) * Decimal(str(property_obj.weekend_dates.price)) / Decimal("100"))
         total_price += charge
         breakdown["weekend_surcharge"] = float(charge)
-
-    breakdown["total_before_discount"] = float(total_price)
 
     # 5. Rating surcharge — applied if avg rating >= owner-defined threshold
     rating_surcharge_amount = Decimal("0.0")
@@ -112,6 +178,7 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
             total_price += rating_surcharge_amount
 
     breakdown["rating_surcharge"] = float(rating_surcharge_amount)
+    breakdown["total_before_discount"] = float(total_price)
 
     # 6. Finally apply discount
     discount = property_obj.discount or 0

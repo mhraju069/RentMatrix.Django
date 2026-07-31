@@ -2,10 +2,11 @@ import datetime
 from django.db.models import Avg
 from django.conf import settings
 from rest_framework import views, status, viewsets
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
-from .utils import get_final_discount_price_for_booking
+from .utils import get_final_discount_price_for_booking, parse_addon_ids
 from apps.auth.utils import format_serializer_errors
 
 from .models import Booking
@@ -16,16 +17,18 @@ from .serializers import (
     MyBookingListSerializer
 )
 
-class CalculateBookingPriceView(views.APIView):
-    permission_classes = [IsAuthenticated]
+class CalculateBookingPriceView(APIView):
+    permission_classes = [AllowAny]
 
     @extend_schema(
+        summary="Calculate Booking Price Breakdown",
+        description="Calculates detailed price breakdown for a property including base price, add-ons, rating surcharge, discounts, etc.",
         parameters=[
-            OpenApiParameter('property_id', OpenApiTypes.UUID, required=True),
-            OpenApiParameter('price_type', OpenApiTypes.STR, required=True, description="daily or monthly"),
-            OpenApiParameter('start_date', OpenApiTypes.STR, required=True, description="YYYY-MM-DD"),
-            OpenApiParameter('end_date', OpenApiTypes.STR, required=True, description="YYYY-MM-DD"),
-            OpenApiParameter('selected_addon_ids', OpenApiTypes.STR, required=False, description="Comma separated IDs of addons"),
+            OpenApiParameter(name='property_id', description='Property UUID', required=True, type=str),
+            OpenApiParameter(name='price_type', description='daily or monthly', required=False, type=str, default='daily'),
+            OpenApiParameter(name='start_date', description='YYYY-MM-DD', required=False, type=str),
+            OpenApiParameter(name='end_date', description='YYYY-MM-DD', required=False, type=str),
+            OpenApiParameter(name='selected_addon_ids', description='Comma separated IDs of addons or JSON array', required=False, type=str),
         ],
         responses={200: dict}
     )
@@ -39,7 +42,7 @@ class CalculateBookingPriceView(views.APIView):
         end_date = request.query_params.get('end_date')
         
         addons_str = request.query_params.get('selected_addon_ids')
-        selected_addon_ids = [aid.strip() for aid in addons_str.split(",")] if addons_str else []
+        selected_addon_ids = parse_addon_ids(addons_str)
 
         try:
             prop = Property.objects.get(id=property_id)
@@ -60,8 +63,9 @@ class CalculateBookingPriceView(views.APIView):
             total_duration = 1
             if start_date and end_date:
                 try:
-                    s_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-                    e_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+                    s_date_raw = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+                    e_date_raw = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+                    s_date, e_date = min(s_date_raw, e_date_raw), max(s_date_raw, e_date_raw)
                     if price_type == 'daily':
                         delta = (e_date - s_date).days
                         if delta > 0:
@@ -84,7 +88,6 @@ class CalculateBookingPriceView(views.APIView):
                 "other_charges": [
                     {
                         "name": c["name"],
-                        "percentage": round(c["percentage"] * rate, 2),
                         "amount": round(c["amount"] * rate, 2),
                         "total_amount": round(c["amount"] * total_duration * rate, 2)
                     }
@@ -94,7 +97,6 @@ class CalculateBookingPriceView(views.APIView):
                 "add_ons": [
                     {
                         "name": a["name"],
-                        "percentage": round(a["percentage"] * rate, 2),
                         "amount": round(a["amount"] * rate, 2),
                         "total_amount": round(a["amount"] * total_duration * rate, 2)
                     }
@@ -170,13 +172,8 @@ class GuestBookingViewSet(viewsets.ModelViewSet):
                 return Response({"status": 404, "success": False, "message": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
                 
             price_type = request.data.get('price_type', 'daily')
-            addons_str = request.data.get('selected_addon_ids')
-            if isinstance(addons_str, str):
-                selected_addon_ids = [aid.strip() for aid in addons_str.split(",")] if addons_str else []
-            elif isinstance(addons_str, list):
-                selected_addon_ids = addons_str
-            else:
-                selected_addon_ids = []
+            addons_raw = request.data.get('selected_addon_ids') or serializer.validated_data.get('selected_addon_ids')
+            selected_addon_ids = parse_addon_ids(addons_raw)
                 
             check_in = request.data.get('check_in')
             check_out = request.data.get('check_out')

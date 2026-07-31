@@ -446,15 +446,10 @@ class PropertySerializer(serializers.ModelSerializer):
             if 'price_monthly' in attrs and attrs['price_monthly'] is not None:
                 attrs['price_monthly'] = to_usd(attrs['price_monthly'])
 
-            if 'weekend_dates' in attrs and attrs['weekend_dates'] is not None:
-                weekend_data = attrs['weekend_dates']
-                if 'price' in weekend_data and weekend_data['price'] is not None:
-                    weekend_data['price'] = to_usd(weekend_data['price'])
+            # NOTE: weekend_dates.price and vacations.price are PERCENTAGES (e.g. 10 = 10%)
+            # They must NOT go through to_usd() — percentages have no currency unit.
+            # Only price_daily, price_monthly, other_charges, add_ons_prices are actual amounts.
 
-            if 'vacations' in attrs and attrs['vacations'] is not None:
-                vacation_data = attrs['vacations']
-                if 'price' in vacation_data and vacation_data['price'] is not None:
-                    vacation_data['price'] = to_usd(vacation_data['price'])
 
             if 'other_charges' in attrs and attrs['other_charges'] is not None:
                 for charge in attrs['other_charges']:
