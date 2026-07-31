@@ -145,6 +145,14 @@ The API will be available at `http://localhost:8000`.
 Copy `.env-demo` to `.env` and fill in the values:
 
 ```env
+# PostgreSQL
+PSQL=True
+DB_NAME=your-db-name
+DB_USER=your-db-user
+DB_PASSWORD=your-db-password
+DB_HOST=your-db-host
+DB_PORT=your-db-port
+
 # Email (SMTP)
 EMAIL_HOST=smtp.example.com
 EMAIL_PORT=587
@@ -163,8 +171,7 @@ CSRF_ALLOW_ORIGINS=https://yourdomain.com
 # Backend Base URL
 BACKEND_URI=https://yourdomain.com
 
-# Stripe (optional)
-STRIPE_SECRET_KEY=sk_live_...
+
 ```
 
 ---
