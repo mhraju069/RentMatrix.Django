@@ -39,8 +39,8 @@ class Property(models.Model):
     hosted_by = models.CharField(max_length=255, null=True, blank=True)
     whatsapp = models.CharField(max_length=15, null=True, blank=True)
     sea_view = models.BooleanField(default=False)
-    price_monthly = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
-    price_daily = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    price_monthly = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True)
+    price_daily = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True)
     views = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -83,7 +83,7 @@ class Weekend(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='weekend_dates')
     weekend = models.JSONField(blank=True, default=list, choices=WEEKEND)
-    price = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    price = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -114,7 +114,7 @@ class Vacetions(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='vacations')
     month = models.JSONField(blank=True, default=list, choices=MONTHS)
-    price = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    price = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -130,7 +130,7 @@ class Vacetions(models.Model):
 class OtherCharges(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='other_charges')
     name = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    price = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True)
 
     class Meta:
         verbose_name = 'Other Charge'
@@ -144,7 +144,7 @@ class OtherCharges(models.Model):
 class AddOnsPrice(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='add_ons_prices')
     service = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    price = models.DecimalField(max_digits=16, decimal_places=6, null=True, blank=True)
 
     class Meta:
         verbose_name = 'Add-on Price'

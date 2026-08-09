@@ -9,11 +9,14 @@ from firebase_admin import credentials
 cred_path = os.path.join(BASE_DIR, "firebase-key.json")
 
 try:
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
-    print("✅ Firebase admin initialized successfully")
+    if os.path.exists(cred_path) and os.path.getsize(cred_path) > 0:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        print("Firebase admin initialized successfully")
+    else:
+        print("Firebase key file is empty or missing, skipping firebase initialization.")
 except Exception as e:
-    print(f"⚠️ Firebase admin initialization failed: {e}")
+    print(f"Firebase admin initialization failed: {e}")
 
 BACKEND_URI=os.getenv("BACKEND_URI", "http://localhost:8000")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_key")
