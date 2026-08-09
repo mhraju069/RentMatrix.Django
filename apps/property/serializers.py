@@ -436,7 +436,9 @@ class PropertySerializer(serializers.ModelSerializer):
                     return None
                 from decimal import Decimal
                 try:
-                    return round(Decimal(str(val)) / rate, 2)
+                    # Store exact value without rounding to preserve precision
+                    # Rounding will happen only when displaying to users
+                    return Decimal(str(val)) / rate
                 except Exception:
                     return val
 
