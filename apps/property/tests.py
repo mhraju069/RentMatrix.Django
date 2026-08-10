@@ -567,10 +567,10 @@ class PropertyDRFTests(APITestCase):
             ]),
             "weekend_dates": json.dumps({
                 "weekend": ["FRI"],
-                "price": 2340
+                "price": 20
             }),
             "other_charges": json.dumps([
-                {"name": "VAT", "price": 58.50}
+                {"name": "VAT", "price": 10}
             ])
         }
         
@@ -588,12 +588,12 @@ class PropertyDRFTests(APITestCase):
         addon = property_obj.add_ons_prices.first()
         self.assertEqual(float(addon.price), 1.00)
         
-        # Check weekend_dates price: 2340 / 117 = 20 USD
+        # Check weekend_dates price: remains 20 (percentage)
         self.assertEqual(float(property_obj.weekend_dates.price), 20.00)
         
-        # Check other_charges VAT: 58.5 / 117 = 0.5 USD
+        # Check other_charges VAT: remains 10 (percentage)
         charge = property_obj.other_charges.first()
-        self.assertEqual(float(charge.price), 0.50)
+        self.assertEqual(float(charge.price), 10.00)
         
         # 2. Retrieve property: since user's preferred currency is BDT,
         # it should convert back to BDT when returned!
@@ -603,14 +603,14 @@ class PropertyDRFTests(APITestCase):
         # Returned prices should be:
         # price_daily: 10 * 117 = 1170.0
         # price_monthly: 1000 * 117 = 117000.0
-        # weekend_dates.price: 20 * 117 = 2340.0
+        # weekend_dates.price: remains 20.0 (percentage)
         # add_ons_prices[0].price: 1 * 117 = 117.0
-        # other_charges[0].price: 0.5 * 117 = 58.5
+        # other_charges[0].price: remains 10.0 (percentage)
         self.assertEqual(response.data["price_daily"], 1170.00)
         self.assertEqual(response.data["price_monthly"], 117000.00)
-        self.assertEqual(response.data["weekend_dates"]["price"], 2340.00)
+        self.assertEqual(response.data["weekend_dates"]["price"], 20.00)
         self.assertEqual(response.data["add_ons_prices"][0]["price"], 117.00)
-        self.assertEqual(response.data["other_charges"][0]["price"], 58.50)
+        self.assertEqual(response.data["other_charges"][0]["price"], 10.00)
 
 
 

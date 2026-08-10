@@ -264,18 +264,18 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             
         # Convert weekend_dates price
         if ret.get('weekend_dates') and 'price' in ret['weekend_dates'] and ret['weekend_dates']['price'] is not None:
-            ret['weekend_dates']['price'] = round(float(ret['weekend_dates']['price']) * rate, 2)
+            ret['weekend_dates']['price'] = round(float(ret['weekend_dates']['price']), 2)
             
         # Convert vacations price
         if ret.get('vacations') and 'price' in ret['vacations'] and ret['vacations']['price'] is not None:
-            ret['vacations']['price'] = round(float(ret['vacations']['price']) * rate, 2)
+            ret['vacations']['price'] = round(float(ret['vacations']['price']), 2)
             
         # Convert other_charges prices
         if ret.get('other_charges'):
             for charge in ret['other_charges']:
                 if charge.get('price') is not None:
-                    charge['price'] = round(float(charge['price']) * rate, 2)
-                    
+                    charge['price'] = round(float(charge['price']), 2)
+
         # Convert add_ons_prices prices
         if ret.get('add_ons_prices'):
             for addon in ret['add_ons_prices']:
@@ -448,15 +448,10 @@ class PropertySerializer(serializers.ModelSerializer):
             if 'price_monthly' in attrs and attrs['price_monthly'] is not None:
                 attrs['price_monthly'] = to_usd(attrs['price_monthly'])
 
-            # NOTE: weekend_dates.price and vacations.price are PERCENTAGES (e.g. 10 = 10%)
+            # NOTE: weekend_dates.price, vacations.price, other_charges.price are PERCENTAGES (e.g. 10 = 10%)
             # They must NOT go through to_usd() — percentages have no currency unit.
-            # Only price_daily, price_monthly, other_charges, add_ons_prices are actual amounts.
+            # Only price_daily, price_monthly, add_ons_prices are actual amounts.
 
-
-            if 'other_charges' in attrs and attrs['other_charges'] is not None:
-                for charge in attrs['other_charges']:
-                    if 'price' in charge and charge['price'] is not None:
-                        charge['price'] = to_usd(charge['price'])
 
             if 'add_ons_prices' in attrs and attrs['add_ons_prices'] is not None:
                 for addon in attrs['add_ons_prices']:

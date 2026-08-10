@@ -101,7 +101,7 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
     # 1. Other Charges
     for oc in property_obj.other_charges.all():
         if oc.price:
-            charge = Decimal(str(oc.price))
+            charge = (Decimal(str(base_price)) * Decimal(str(oc.price)) / Decimal("100"))
             total_price += charge
             breakdown["other_charges"].append({"name": oc.name, "amount": float(charge)})
             breakdown["other_charges_total"] += float(charge)
