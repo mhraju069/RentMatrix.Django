@@ -563,7 +563,7 @@ class PropertyDRFTests(APITestCase):
             "status": "AVAILABLE",
             "address": "Dhaka",
             "add_ons_prices": json.dumps([
-                {"service": "Breakfast", "price": 117}
+                {"service": "Breakfast", "price": 10}
             ]),
             "weekend_dates": json.dumps({
                 "weekend": ["FRI"],
@@ -584,9 +584,9 @@ class PropertyDRFTests(APITestCase):
         self.assertEqual(float(property_obj.price_daily), 10.00)
         self.assertEqual(float(property_obj.price_monthly), 1000.00)
         
-        # Check add_ons_prices service Breakfast: 117 / 117 = 1 USD
+        # Check add_ons_prices service Breakfast: remains 10 (percentage)
         addon = property_obj.add_ons_prices.first()
-        self.assertEqual(float(addon.price), 1.00)
+        self.assertEqual(float(addon.price), 10.00)
         
         # Check weekend_dates price: remains 20 (percentage)
         self.assertEqual(float(property_obj.weekend_dates.price), 20.00)
@@ -604,12 +604,12 @@ class PropertyDRFTests(APITestCase):
         # price_daily: 10 * 117 = 1170.0
         # price_monthly: 1000 * 117 = 117000.0
         # weekend_dates.price: remains 20.0 (percentage)
-        # add_ons_prices[0].price: 1 * 117 = 117.0
+        # add_ons_prices[0].price: remains 10.0 (percentage)
         # other_charges[0].price: remains 10.0 (percentage)
         self.assertEqual(response.data["price_daily"], 1170.00)
         self.assertEqual(response.data["price_monthly"], 117000.00)
         self.assertEqual(response.data["weekend_dates"]["price"], 20.00)
-        self.assertEqual(response.data["add_ons_prices"][0]["price"], 117.00)
+        self.assertEqual(response.data["add_ons_prices"][0]["price"], 10.00)
         self.assertEqual(response.data["other_charges"][0]["price"], 10.00)
 
 

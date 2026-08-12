@@ -280,7 +280,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
         if ret.get('add_ons_prices'):
             for addon in ret['add_ons_prices']:
                 if addon.get('price') is not None:
-                    addon['price'] = round(float(addon['price']) * rate, 2)
+                    addon['price'] = round(float(addon['price']), 2)
                     
         return ret
 
@@ -448,15 +448,9 @@ class PropertySerializer(serializers.ModelSerializer):
             if 'price_monthly' in attrs and attrs['price_monthly'] is not None:
                 attrs['price_monthly'] = to_usd(attrs['price_monthly'])
 
-            # NOTE: weekend_dates.price, vacations.price, other_charges.price are PERCENTAGES (e.g. 10 = 10%)
+            # NOTE: weekend_dates.price, vacations.price, other_charges.price, add_ons_prices.price are PERCENTAGES (e.g. 10 = 10%)
             # They must NOT go through to_usd() — percentages have no currency unit.
-            # Only price_daily, price_monthly, add_ons_prices are actual amounts.
-
-
-            if 'add_ons_prices' in attrs and attrs['add_ons_prices'] is not None:
-                for addon in attrs['add_ons_prices']:
-                    if 'price' in addon and addon['price'] is not None:
-                        addon['price'] = to_usd(addon['price'])
+            # Only price_daily, price_monthly are actual amounts.
 
         return super().validate(attrs)
     

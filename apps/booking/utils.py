@@ -111,7 +111,7 @@ def get_final_discount_price_for_booking(property_obj_or_id, price_type="monthly
         selected_ids_str = parse_addon_ids(selected_addon_ids)
         for addon in property_obj.add_ons_prices.all():
             if addon.price and str(addon.id) in selected_ids_str:
-                charge = Decimal(str(addon.price))
+                charge = (Decimal(str(base_price)) * Decimal(str(addon.price)) / Decimal("100"))
                 total_price += charge
                 breakdown["add_ons"].append({"name": addon.service, "amount": float(charge)})
                 breakdown["add_ons_total"] += float(charge)
